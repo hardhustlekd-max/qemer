@@ -1,7 +1,8 @@
 import { APIProvider, LiveOddsUpdate, LiveScore } from './types.js';
 import { Fixture } from '../core/types.js';
 import { db } from '../core/db.js';
-import { INITIAL_UPCOMING_FIXTURES } from '../core/seedData.js';
+import { fetchRealLiveScores } from '../services/realLiveScoresService.js';
+import { fetchRealUpcomingFixtures } from '../services/realUpcomingFixturesService.js';
 
 export class ApiFootballProvider implements APIProvider {
   id = 'API_FOOTBALL' as const;
@@ -16,10 +17,12 @@ export class ApiFootballProvider implements APIProvider {
   ];
 
   async getUpcomingFixtures(date?: string): Promise<Fixture[]> {
-    const raw = db.getUpcomingFixtures();
-    const base = raw.length > 0 ? raw : INITIAL_UPCOMING_FIXTURES;
+    let raw = db.getUpcomingFixtures(undefined, date);
+    if (raw.length === 0) {
+      raw = await fetchRealUpcomingFixtures();
+    }
 
-    return base.map((f) => ({
+    return raw.map((f) => ({
       ...f,
       providerId: 'API_FOOTBALL',
     }));
@@ -38,30 +41,15 @@ export class ApiFootballProvider implements APIProvider {
   }
 
   async getLiveScores(): Promise<LiveScore[]> {
-    return [
-      {
-        fixtureId: 'd1_bayern_dortmund_today',
-        homeTeam: 'Bayern Munich',
-        awayTeam: 'Dortmund',
-        homeScore: 2,
-        awayScore: 2,
-        minute: 76,
-        status: 'SECOND_HALF',
-        events: [
-          { minute: 9, type: 'GOAL', team: 'Bayern Munich', player: 'Kane' },
-          { minute: 31, type: 'GOAL', team: 'Dortmund', player: 'Guirassy' },
-          { minute: 54, type: 'GOAL', team: 'Bayern Munich', player: 'Musiala' },
-          { minute: 71, type: 'GOAL', team: 'Dortmund', player: 'Adeyemi' },
-        ],
-      },
-    ];
+    return fetchRealLiveScores();
   }
 
   async syncHistoricalData(): Promise<{ success: boolean; matchesCount: number; message: string }> {
+    const fixtures = await fetchRealUpcomingFixtures();
     return {
       success: true,
-      matchesCount: 110,
-      message: 'API-Football synchronized multi-league odds comparison datasets into local engine.',
+      matchesCount: fixtures.length,
+      message: `API-Football synchronized ${fixtures.length} real fixtures into local engine.`,
     };
   }
 }

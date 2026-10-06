@@ -1,7 +1,8 @@
 import { APIProvider, LiveOddsUpdate, LiveScore } from './types.js';
 import { Fixture } from '../core/types.js';
 import { db } from '../core/db.js';
-import { INITIAL_UPCOMING_FIXTURES } from '../core/seedData.js';
+import { fetchRealLiveScores } from '../services/realLiveScoresService.js';
+import { fetchRealUpcomingFixtures } from '../services/realUpcomingFixturesService.js';
 
 export class BigBallsDataProvider implements APIProvider {
   id = 'BIG_BALLS_DATA' as const;
@@ -16,16 +17,17 @@ export class BigBallsDataProvider implements APIProvider {
   ];
 
   async getUpcomingFixtures(date?: string): Promise<Fixture[]> {
-    const raw = db.getUpcomingFixtures();
-    const base = raw.length > 0 ? raw : INITIAL_UPCOMING_FIXTURES;
+    let raw = db.getUpcomingFixtures(undefined, date);
+    if (raw.length === 0) {
+      raw = await fetchRealUpcomingFixtures();
+    }
 
     // Enhance fixtures with Big Balls sharp market odds
-    return base.map((f) => ({
+    return raw.map((f) => ({
       ...f,
       providerId: 'BIG_BALLS_DATA',
       odds: {
         ...f.odds,
-        // Sharp market slightly altered odds reflecting heavy momentum
         homeWin: Number((f.odds.homeWin * 0.98).toFixed(2)),
         draw: Number((f.odds.draw * 1.05).toFixed(2)),
         awayWin: Number((f.odds.awayWin * 1.02).toFixed(2)),
@@ -46,39 +48,15 @@ export class BigBallsDataProvider implements APIProvider {
   }
 
   async getLiveScores(): Promise<LiveScore[]> {
-    return [
-      {
-        fixtureId: 'e0_arsenal_chelsea_today',
-        homeTeam: 'Arsenal',
-        awayTeam: 'Chelsea',
-        homeScore: 1,
-        awayScore: 0,
-        minute: 27,
-        status: 'FIRST_HALF',
-        events: [{ minute: 14, type: 'GOAL', team: 'Arsenal', player: 'Saka' }],
-      },
-      {
-        fixtureId: 'sp1_realmadrid_valencia_today',
-        homeTeam: 'Real Madrid',
-        awayTeam: 'Valencia',
-        homeScore: 3,
-        awayScore: 0,
-        minute: 82,
-        status: 'SECOND_HALF',
-        events: [
-          { minute: 12, type: 'GOAL', team: 'Real Madrid', player: 'Vinicius Jr' },
-          { minute: 45, type: 'GOAL', team: 'Real Madrid', player: 'Mbappe' },
-          { minute: 61, type: 'GOAL', team: 'Real Madrid', player: 'Bellingham' },
-        ],
-      },
-    ];
+    return fetchRealLiveScores();
   }
 
   async syncHistoricalData(): Promise<{ success: boolean; matchesCount: number; message: string }> {
+    const fixtures = await fetchRealUpcomingFixtures();
     return {
       success: true,
-      matchesCount: 150,
-      message: 'Big Balls Data Engine synchronised 150 calibrated momentum telemetry data points.',
+      matchesCount: fixtures.length,
+      message: `Big Balls Data Engine synchronized ${fixtures.length} live upcoming fixtures.`,
     };
   }
 }

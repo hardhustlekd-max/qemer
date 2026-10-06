@@ -172,3 +172,32 @@ export interface ProviderStatus {
   description: string;
   features: string[];
 }
+
+export interface GroundingSource {
+  title: string;
+  url: string;
+}
+
+export interface FootballTipItem {
+  id: string;
+  category: 'HEADLINE' | 'MATCH_PREVIEW' | 'BETTING_TIP' | 'INJURY_TEAM_NEWS';
+  title: string;
+  match?: string;
+  league?: string;
+  predictionOrTip?: string;
+  confidenceOrOdds?: string;
+  analysis: string;
+  keyPoints?: string[];
+  sourceTitle?: string;
+  sourceUrl?: string;
+}
+
+export interface TrendingTipsData {
+  lastUpdated: string;
+  headlineSummary: string;
+  rawAnalysisMarkdown: string;
+  tips: FootballTipItem[];
+  groundingSources: GroundingSource[];
+  isRealGrounding: boolean;
+  quotaNotice?: string;
+}

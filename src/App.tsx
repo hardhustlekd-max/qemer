@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from './components/Header.js';
 import { LiveScoresTicker } from './components/LiveScoresTicker.js';
 import { FixturesList } from './components/FixturesList.js';
+import { TipsSection } from './components/TipsSection.js';
 import { AccaConfigurator } from './components/AccaConfigurator.js';
 import { TicketSlip } from './components/TicketSlip.js';
 import { MatchDetailModal } from './components/MatchDetailModal.js';
@@ -13,6 +14,7 @@ import {
   EngineSettings,
   ProviderStatus,
   MarketOption,
+  TrendingTipsData,
 } from './core/types.js';
 import { LiveScore } from './providers/types.js';
 import { AccaGenerationParams } from './core/accumulator.js';
@@ -21,9 +23,15 @@ import { TrendingUp, Sparkles, Shield, Target, Sliders, Dices } from 'lucide-rea
 
 export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [activeTab, setActiveTab] = useState<'FIXTURES' | 'TIPS'>('FIXTURES');
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [isLoadingFixtures, setIsLoadingFixtures] = useState<boolean>(true);
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
+
+  // Grounded Trending Tips state
+  const [tipsData, setTipsData] = useState<TrendingTipsData | null>(null);
+  const [isLoadingTips, setIsLoadingTips] = useState<boolean>(false);
+  const [isRefreshingTips, setIsRefreshingTips] = useState<boolean>(false);
 
   const [settings, setSettings] = useState<EngineSettings | null>(null);
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
@@ -82,6 +90,30 @@ export default function App() {
     }
   }, [selectedLeague]);
 
+  const fetchTips = useCallback(async (forceRefresh = false) => {
+    try {
+      if (forceRefresh) {
+        setIsRefreshingTips(true);
+        const data = await EngineService.refreshTrendingTips();
+        if (data) {
+          setTipsData(data);
+          showNotification('Updated latest Google Search grounded football trends!');
+        }
+      } else {
+        setIsLoadingTips(true);
+        const data = await EngineService.getTrendingTips();
+        if (data) {
+          setTipsData(data);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch tips:', e);
+    } finally {
+      setIsLoadingTips(false);
+      setIsRefreshingTips(false);
+    }
+  }, []);
+
   const fetchSettingsAndProviders = useCallback(async () => {
     try {
       const [sData, pData, statsData] = await Promise.all([
@@ -110,6 +142,7 @@ export default function App() {
   useEffect(() => {
     fetchSettingsAndProviders();
     fetchFixtures('ALL');
+    fetchTips(false);
     fetchLiveScores();
 
     const interval = setInterval(fetchLiveScores, 15000);
@@ -143,6 +176,7 @@ export default function App() {
       legCount: strategy === 'BANKER' ? 3 : 4,
       minProbability: strategy === 'BANKER' ? 0.72 : 0.55,
       stake: 10,
+      dateFilter: 'TODAY',
     });
   };
 
@@ -311,6 +345,8 @@ export default function App() {
         settings={settings}
         providers={providers}
         stats={stats}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenSeedModal={() => setIsSettingsOpen(true)}
         onQuickGenerate={handleQuickGenerate}
@@ -321,59 +357,12 @@ export default function App() {
       />
 
       {/* Live In-Play Scores Ticker */}
-      <LiveScoresTicker
-        liveScores={liveScores}
-        providerName={providers.find((p) => p.id === settings?.activeProvider)?.name || 'Provider'}
-      />
+      <LiveScoresTicker liveScores={liveScores} />
 
       {/* Main Content Dashboard */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-5 space-y-5">
-        {/* Top Wireframe Quick Generation Action Chips */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl shadow-xs">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              onClick={() => {
-                handleGenerateAcca({
-                  strategy: 'VALUE_HUNTER',
-                  legCount: 10,
-                  minProbability: 0.50,
-                  stake: 10,
-                });
-              }}
-              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1 shadow-xs transition-all cursor-pointer"
-            >
-              <span>🔥</span>
-              <span>Today's Slip</span>
-            </button>
-
-            <button
-              onClick={() => handleQuickGenerate('BANKER')}
-              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 flex items-center gap-1 transition-all cursor-pointer"
-            >
-              <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Safe Picks</span>
-            </button>
-
-            <button
-              onClick={() => handleQuickGenerate('VALUE_HUNTER')}
-              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 flex items-center gap-1 transition-all cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Top Value</span>
-            </button>
-          </div>
-
-          <button
-            onClick={() => setShowAccaBuilder(!showAccaBuilder)}
-            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-1 transition-all cursor-pointer"
-          >
-            <Sliders className="w-3.5 h-3.5 text-indigo-500" />
-            <span>{showAccaBuilder ? 'Hide Custom' : 'Custom Slip'}</span>
-          </button>
-        </div>
-
         {/* Collapsible Acca Configurator Panel */}
-        {showAccaBuilder && (
+        {activeTab === 'FIXTURES' && showAccaBuilder && (
           <div className="animate-in fade-in slide-in-from-top-3">
             <AccaConfigurator
               onGenerate={handleGenerateAcca}
@@ -382,18 +371,32 @@ export default function App() {
           </div>
         )}
 
-        {/* Central Wireframe View Matching Attachment */}
+        {/* Central Dashboard Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           <div className={`${activeSlip && activeSlip.legs.length > 0 ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-4`}>
-            <FixturesList
-              fixtures={fixtures}
-              isLoading={isLoadingFixtures}
-              onSelectDetail={(f) => setSelectedDetailFixture(f)}
-              onAddLegToSlip={handleAddLegToSlip}
-              isLegInSlip={isLegInSlip}
-              selectedLeague={selectedLeague}
-              onSelectLeague={handleSelectLeague}
-            />
+            {activeTab === 'FIXTURES' ? (
+              <FixturesList
+                fixtures={fixtures}
+                isLoading={isLoadingFixtures}
+                onSelectDetail={(f) => setSelectedDetailFixture(f)}
+                onAddLegToSlip={handleAddLegToSlip}
+                isLegInSlip={isLegInSlip}
+                selectedLeague={selectedLeague}
+                onSelectLeague={handleSelectLeague}
+                onGenerateAcca={handleGenerateAcca}
+                onQuickGenerate={handleQuickGenerate}
+                onToggleCustomSlip={() => setShowAccaBuilder(!showAccaBuilder)}
+                isCustomSlipOpen={showAccaBuilder}
+              />
+            ) : (
+              <TipsSection
+                tipsData={tipsData}
+                isLoading={isLoadingTips}
+                isRefreshing={isRefreshingTips}
+                onRefresh={() => fetchTips(true)}
+                onAddLegToSlip={handleAddLegToSlip}
+              />
+            )}
           </div>
 
           {/* Side Ticket Slip if active */}
@@ -427,6 +430,9 @@ export default function App() {
         onSaveSettings={handleSaveSettings}
         onReSeedDatabase={handleReSeedDatabase}
         isSeeding={isSeeding}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onProviderChange={handleProviderChange}
       />
     </div>
   );

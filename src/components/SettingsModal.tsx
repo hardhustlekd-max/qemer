@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings, Database, Sliders, RefreshCw, Cpu, Check, AlertCircle, FileText } from 'lucide-react';
+import { X, Settings, Database, Sliders, RefreshCw, Cpu, Check, AlertCircle, FileText, Sun, Moon } from 'lucide-react';
 import { EngineSettings, ProviderStatus } from '../core/types.js';
 
 interface SettingsModalProps {
@@ -10,6 +10,9 @@ interface SettingsModalProps {
   onSaveSettings: (newSettings: Partial<EngineSettings>) => void;
   onReSeedDatabase: (customCsv?: string, reset?: boolean) => void;
   isSeeding: boolean;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
+  onProviderChange?: (providerId: EngineSettings['activeProvider']) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -20,6 +23,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSaveSettings,
   onReSeedDatabase,
   isSeeding,
+  theme,
+  onToggleTheme,
+  onProviderChange,
 }) => {
   if (!isOpen || !settings) return null;
 
@@ -35,6 +41,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'ENGINE' | 'PROVIDERS' | 'DATABASE'>('ENGINE');
   const [customCsvText, setCustomCsvText] = useState('');
   const [showSavedToast, setShowSavedToast] = useState(false);
+
+  const handleProviderSelect = (providerId: EngineSettings['activeProvider']) => {
+    setActiveProvider(providerId);
+    if (onProviderChange) {
+      onProviderChange(providerId);
+    }
+  };
 
   const handleSave = () => {
     onSaveSettings({
@@ -59,24 +72,82 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Engine Configuration &amp; Providers</h2>
-              <p className="text-xs text-slate-400">Manage statistical weights, providers, and SQLite storage</p>
+              <h2 className="text-base font-bold text-white">Settings &amp; Preferences</h2>
+              <p className="text-xs text-slate-400">Configure theme, active data provider, and engine parameters</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Quick Preferences Bar: Theme Switcher & Provider Selector */}
+        <div className="px-6 py-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+          {/* Theme Switcher */}
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-400 text-xs">Appearance:</span>
+            <div className="inline-flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  if (theme !== 'light') onToggleTheme();
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  theme === 'light'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Sun className="w-3.5 h-3.5" />
+                <span>Light</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (theme !== 'dark') onToggleTheme();
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  theme === 'dark'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Moon className="w-3.5 h-3.5" />
+                <span>Dark</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Provider Selector Dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-400 text-xs">Provider:</span>
+            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
+              <Cpu className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <select
+                id="modal-provider-selector-dropdown"
+                value={activeProvider}
+                onChange={(e) => handleProviderSelect(e.target.value as any)}
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer pr-1"
+              >
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Modal Navigation Tabs */}
         <div className="flex items-center gap-2 px-6 pt-4 border-b border-slate-800/80 text-xs">
           <button
             onClick={() => setActiveTab('ENGINE')}
-            className={`pb-2.5 font-semibold px-2 border-b-2 transition-all ${
+            className={`pb-2.5 font-semibold px-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'ENGINE'
                 ? 'border-emerald-500 text-emerald-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -86,7 +157,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('PROVIDERS')}
-            className={`pb-2.5 font-semibold px-2 border-b-2 transition-all ${
+            className={`pb-2.5 font-semibold px-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'PROVIDERS'
                 ? 'border-cyan-500 text-cyan-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -96,7 +167,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('DATABASE')}
-            className={`pb-2.5 font-semibold px-2 border-b-2 transition-all ${
+            className={`pb-2.5 font-semibold px-2 border-b-2 transition-all cursor-pointer ${
               activeTab === 'DATABASE'
                 ? 'border-indigo-500 text-indigo-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -198,7 +269,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {providers.map((p) => (
                 <div
                   key={p.id}
-                  onClick={() => setActiveProvider(p.id as any)}
+                  onClick={() => handleProviderSelect(p.id as any)}
                   className={`p-4 rounded-xl border cursor-pointer transition-all ${
                     activeProvider === p.id
                       ? 'bg-emerald-950/30 border-emerald-500 shadow-md shadow-emerald-950/40'
@@ -252,7 +323,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     onClick={() => onReSeedDatabase(undefined, false)}
                     disabled={isSeeding}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     {isSeeding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                     <span>Ingest Standard Season CSVs</span>
@@ -261,7 +332,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     onClick={() => onReSeedDatabase(undefined, true)}
                     disabled={isSeeding}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-rose-900/60 text-slate-300 hover:text-rose-300 text-xs font-semibold border border-slate-700 hover:border-rose-700 flex items-center gap-2 transition-all disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-rose-900/60 text-slate-300 hover:text-rose-300 text-xs font-semibold border border-slate-700 hover:border-rose-700 flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     <span>Clear &amp; Fresh Re-Seed</span>
                   </button>
@@ -292,7 +363,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     }
                   }}
                   disabled={isSeeding || !customCsvText.trim()}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold disabled:opacity-40"
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold disabled:opacity-40 cursor-pointer"
                 >
                   Parse &amp; Ingest Custom CSV
                 </button>
@@ -313,13 +384,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
               >
                 Close
               </button>
               <button
                 onClick={handleSave}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-950 transition-all"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-950 transition-all cursor-pointer"
               >
                 Apply Parameters
               </button>

@@ -1,8 +1,8 @@
 import { APIProvider, LiveOddsUpdate, LiveScore } from './types.js';
 import { Fixture } from '../core/types.js';
-import { FootballDataCSVParser } from '../core/csvParser.js';
 import { db } from '../core/db.js';
-import { PREMIER_LEAGUE_HISTORICAL_CSV, INITIAL_UPCOMING_FIXTURES } from '../core/seedData.js';
+import { fetchRealLiveScores } from '../services/realLiveScoresService.js';
+import { fetchRealUpcomingFixtures } from '../services/realUpcomingFixturesService.js';
 
 export class FootballDataCoUkProvider implements APIProvider {
   id = 'FOOTBALL_DATA_CO_UK' as const;
@@ -17,14 +17,11 @@ export class FootballDataCoUkProvider implements APIProvider {
   ];
 
   async getUpcomingFixtures(date?: string): Promise<Fixture[]> {
-    // Return fixtures stored in SQLite or default authentic fixtures
-    const existing = db.getUpcomingFixtures();
+    const existing = db.getUpcomingFixtures(undefined, date);
     if (existing.length > 0) {
       return existing;
     }
-    // Seed default upcoming
-    db.insertUpcomingFixtures(INITIAL_UPCOMING_FIXTURES);
-    return INITIAL_UPCOMING_FIXTURES;
+    return fetchRealUpcomingFixtures();
   }
 
   async getLiveOdds(fixtureId: string): Promise<LiveOddsUpdate> {
@@ -49,56 +46,15 @@ export class FootballDataCoUkProvider implements APIProvider {
   }
 
   async getLiveScores(): Promise<LiveScore[]> {
-    // Simulated live match states for active fixtures
-    return [
-      {
-        fixtureId: 'e0_brighton_nottingham_today',
-        homeTeam: 'Brighton',
-        awayTeam: "Nott'm Forest",
-        homeScore: 1,
-        awayScore: 0,
-        minute: 34,
-        status: 'FIRST_HALF',
-        events: [{ minute: 18, type: 'GOAL', team: 'Brighton', player: 'Mitoma' }],
-      },
-      {
-        fixtureId: 'd1_leverkusen_leipzig_today',
-        homeTeam: 'Leverkusen',
-        awayTeam: 'RB Leipzig',
-        homeScore: 2,
-        awayScore: 1,
-        minute: 68,
-        status: 'SECOND_HALF',
-        events: [
-          { minute: 22, type: 'GOAL', team: 'Leverkusen', player: 'Wirtz' },
-          { minute: 41, type: 'GOAL', team: 'RB Leipzig', player: 'Openda' },
-          { minute: 58, type: 'GOAL', team: 'Leverkusen', player: 'Boniface' },
-        ],
-      },
-    ];
+    return fetchRealLiveScores();
   }
 
   async syncHistoricalData(): Promise<{ success: boolean; matchesCount: number; message: string }> {
-    try {
-      // Ingest bundled structured CSV data
-      const parsedMatches = FootballDataCSVParser.parseCSV(PREMIER_LEAGUE_HISTORICAL_CSV);
-      const inserted = db.insertHistoricalMatches(parsedMatches);
-
-      // Also ensure upcoming fixtures exist
-      db.insertUpcomingFixtures(INITIAL_UPCOMING_FIXTURES);
-
-      return {
-        success: true,
-        matchesCount: inserted,
-        message: `Successfully parsed and seeded ${inserted} historical matches from Football-Data.co.uk CSV dataset into SQLite.`,
-      };
-    } catch (err: any) {
-      console.error('FootballDataCoUkProvider sync error:', err);
-      return {
-        success: false,
-        matchesCount: 0,
-        message: `Failed to parse historical CSV data: ${err?.message || 'Unknown error'}`,
-      };
-    }
+    const fixtures = await fetchRealUpcomingFixtures();
+    return {
+      success: true,
+      matchesCount: fixtures.length,
+      message: `Synchronized ${fixtures.length} live upcoming fixtures from real data feeds into SQLite.`,
+    };
   }
 }

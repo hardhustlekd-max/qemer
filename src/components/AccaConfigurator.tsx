@@ -10,6 +10,7 @@ interface AccaConfiguratorProps {
 
 export const AccaConfigurator: React.FC<AccaConfiguratorProps> = ({ onGenerate, isGenerating }) => {
   const [strategy, setStrategy] = useState<'BANKER' | 'VALUE_HUNTER' | 'CUSTOM'>('BANKER');
+  const [dateFilter, setDateFilter] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL'>('TODAY');
   const [legCount, setLegCount] = useState<number>(4);
   const [targetOdds, setTargetOdds] = useState<number>(8.0);
   const [minProbability, setMinProbability] = useState<number>(0.65);
@@ -40,6 +41,7 @@ export const AccaConfigurator: React.FC<AccaConfiguratorProps> = ({ onGenerate, 
       minProbability,
       stake,
       allowedMarkets: selectedMarkets,
+      dateFilter,
     });
   };
 
@@ -105,6 +107,38 @@ export const AccaConfigurator: React.FC<AccaConfiguratorProps> = ({ onGenerate, 
           <span>Custom Slip</span>
           <span className="text-[9px] opacity-80 font-normal">Target Odds</span>
         </button>
+      </div>
+
+      {/* Fixture Date Scope Selector - Defaults to Today */}
+      <div className="space-y-1.5 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+        <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+          <span>Match Date Scope:</span>
+          <span className="text-[11px] text-emerald-400 font-bold font-mono">
+            {dateFilter === 'TODAY' ? "Today's Picks" : dateFilter === 'TOMORROW' ? 'Tomorrow' : dateFilter === 'NEXT_3_DAYS' ? 'Next 3 Days' : dateFilter === 'THIS_WEEK' ? 'This Week' : 'All Dates'}
+          </span>
+        </div>
+        <div className="grid grid-cols-5 gap-1 pt-1">
+          {[
+            { key: 'TODAY' as const, label: 'Today' },
+            { key: 'TOMORROW' as const, label: 'Tomorrow' },
+            { key: 'NEXT_3_DAYS' as const, label: '3 Days' },
+            { key: 'THIS_WEEK' as const, label: 'Week' },
+            { key: 'ALL' as const, label: 'All' },
+          ].map((d) => (
+            <button
+              key={d.key}
+              type="button"
+              onClick={() => setDateFilter(d.key)}
+              className={`py-1 px-1 rounded-lg text-[11px] font-bold border text-center transition-all cursor-pointer ${
+                dateFilter === d.key
+                  ? 'bg-emerald-600 border-emerald-500 text-white shadow-xs'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Dynamic Controls based on Strategy */}

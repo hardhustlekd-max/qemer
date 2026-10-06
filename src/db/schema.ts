@@ -53,6 +53,38 @@ export interface AppSettingsSchema {
   value: string; // JSON string of EngineSettings
 }
 
+export type QuickSlipStrategy = 'TODAY_SLIP' | 'SAFE_PICKS' | 'TOP_VALUE' | 'CUSTOM_SLIP';
+export type DateFilterScope = 'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM';
+export type MarketChoiceFilter = 'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS';
+
+export interface TablePaginationSchema {
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface LiveScoresCacheSchema {
+  fixture_id: string; // Primary Key
+  home_team: string;
+  away_team: string;
+  home_score: number;
+  away_score: number;
+  minute: number;
+  status: string; // 'FIRST_HALF' | 'HALF_TIME' | 'SECOND_HALF' | 'EXTRA_TIME' | 'FINISHED'
+  events_json?: string | null;
+  updated_at: string; // ISO timestamp
+}
+
+export interface FootballTipsCacheSchema {
+  id: string; // Primary Key e.g. 'latest_tips'
+  tips_json: string;
+  headline_summary: string;
+  raw_markdown: string;
+  sources_json: string;
+  updated_at: string; // ISO timestamp
+}
+
 export const DDL_STATEMENTS = {
   createHistoricalMatches: `
     CREATE TABLE IF NOT EXISTS historical_matches (
@@ -100,11 +132,35 @@ export const DDL_STATEMENTS = {
       b365_btts_no REAL,
       status TEXT NOT NULL DEFAULT 'SCHEDULED'
     );
+    CREATE INDEX IF NOT EXISTS idx_upcoming_date ON upcoming_fixtures(match_date);
   `,
   createAppSettings: `
     CREATE TABLE IF NOT EXISTS app_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    );
+  `,
+  createLiveScoresCache: `
+    CREATE TABLE IF NOT EXISTS live_scores_cache (
+      fixture_id TEXT PRIMARY KEY,
+      home_team TEXT NOT NULL,
+      away_team TEXT NOT NULL,
+      home_score INTEGER NOT NULL DEFAULT 0,
+      away_score INTEGER NOT NULL DEFAULT 0,
+      minute INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'FIRST_HALF',
+      events_json TEXT,
+      updated_at TEXT NOT NULL
+    );
+  `,
+  createFootballTipsCache: `
+    CREATE TABLE IF NOT EXISTS football_tips_cache (
+      id TEXT PRIMARY KEY,
+      tips_json TEXT NOT NULL,
+      headline_summary TEXT NOT NULL,
+      raw_markdown TEXT NOT NULL,
+      sources_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     );
   `,
 };

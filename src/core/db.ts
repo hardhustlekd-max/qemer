@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import initSqlJs, { Database, SqlValue } from 'sql.js';
 import { HistoricalMatch, Fixture, EngineSettings } from './types.js';
+import { getRelativeDateStr } from './seedData.js';
 
 const DB_DIR = path.resolve(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'football.sqlite');
@@ -33,6 +34,9 @@ export class FootballDB {
     }
 
     this.createTables();
+    // Clear any stale upcoming fixtures to force fresh live fetch
+    this.db.run(`DELETE FROM upcoming_fixtures WHERE id LIKE 'wireframe_%' OR id LIKE 'e0_%' OR id LIKE 'sp1_%' OR id LIKE 'd1_%' OR id LIKE 'i1_%'`);
+    this.saveToDisk();
     this.isInitialized = true;
   }
 
@@ -101,10 +105,36 @@ export class FootballDB {
         status TEXT NOT NULL DEFAULT 'SCHEDULED'
       );
 
+      CREATE INDEX IF NOT EXISTS idx_upcoming_date ON upcoming_fixtures(match_date);
+
       CREATE TABLE IF NOT EXISTS app_settings (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS live_scores_cache (
+        fixture_id TEXT PRIMARY KEY,
+        home_team TEXT NOT NULL,
+        away_team TEXT NOT NULL,
+        home_score INTEGER NOT NULL DEFAULT 0,
+        away_score INTEGER NOT NULL DEFAULT 0,
+        minute INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'FIRST_HALF',
+        events_json TEXT,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS football_tips_cache (
+        id TEXT PRIMARY KEY,
+        tips_json TEXT NOT NULL,
+        headline_summary TEXT NOT NULL,
+        raw_markdown TEXT NOT NULL,
+        sources_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      -- Purge any legacy mock fixtures from SQLite
+      DELETE FROM upcoming_fixtures WHERE id LIKE 'wireframe_%' OR id LIKE 'e0_%' OR id LIKE 'sp1_%' OR id LIKE 'd1_%' OR id LIKE 'i1_%';
     `);
 
     // Insert default settings if not exists
@@ -228,16 +258,33 @@ export class FootballDB {
     return fixtures.length;
   }
 
-  getUpcomingFixtures(leagueFilter?: string): Fixture[] {
+  getUpcomingFixtures(leagueFilter?: string, dateFilter?: string): Fixture[] {
     if (!this.db) return [];
 
-    let query = `SELECT * FROM upcoming_fixtures`;
-    const params: SqlValue[] = [];
+    const todayStr = getRelativeDateStr(0);
+
+    let query = `SELECT * FROM upcoming_fixtures WHERE match_date >= ?`;
+    const params: SqlValue[] = [todayStr];
 
     if (leagueFilter && leagueFilter !== 'ALL') {
-      query += ` WHERE league = ?`;
+      query += ` AND league = ?`;
       params.push(leagueFilter);
     }
+
+    if (dateFilter === 'TODAY') {
+      query += ` AND match_date = ?`;
+      params.push(todayStr);
+    } else if (dateFilter === 'TOMORROW') {
+      query += ` AND match_date = ?`;
+      params.push(getRelativeDateStr(1));
+    } else if (dateFilter === 'NEXT_3_DAYS') {
+      query += ` AND match_date <= ?`;
+      params.push(getRelativeDateStr(2));
+    } else if (dateFilter === 'THIS_WEEK') {
+      query += ` AND match_date <= ?`;
+      params.push(getRelativeDateStr(6));
+    }
+
     query += ` ORDER BY match_date ASC, kick_off_time ASC`;
 
     const stmt = this.db.prepare(query);
@@ -393,6 +440,66 @@ export class FootballDB {
     if (!this.db) return;
     this.db.run(`DELETE FROM historical_matches`);
     this.saveToDisk();
+  }
+
+  getLatestTipsCache(): {
+    tipsJson: string;
+    headlineSummary: string;
+    rawMarkdown: string;
+    sourcesJson: string;
+    updatedAt: string;
+  } | null {
+    if (!this.db) return null;
+    try {
+      const stmt = this.db.prepare(`
+        SELECT tips_json, headline_summary, raw_markdown, sources_json, updated_at
+        FROM football_tips_cache
+        WHERE id = 'latest_tips'
+      `);
+      if (stmt.step()) {
+        const row = stmt.getAsObject();
+        const result = {
+          tipsJson: String(row.tips_json),
+          headlineSummary: String(row.headline_summary),
+          rawMarkdown: String(row.raw_markdown),
+          sourcesJson: String(row.sources_json),
+          updatedAt: String(row.updated_at),
+        };
+        stmt.free();
+        return result;
+      }
+      stmt.free();
+    } catch (e) {
+      console.error('Error fetching tips cache from DB:', e);
+    }
+    return null;
+  }
+
+  saveTipsCache(
+    tipsJson: string,
+    headlineSummary: string,
+    rawMarkdown: string,
+    sourcesJson: string
+  ): void {
+    if (!this.db) return;
+    try {
+      const stmt = this.db.prepare(`
+        INSERT OR REPLACE INTO football_tips_cache (
+          id, tips_json, headline_summary, raw_markdown, sources_json, updated_at
+        ) VALUES ('latest_tips', ?, ?, ?, ?, ?)
+      `);
+      stmt.run([
+        tipsJson,
+        headlineSummary,
+        rawMarkdown,
+        sourcesJson,
+        new Date().toISOString(),
+      ]);
+      stmt.free();
+      this.saveToDisk();
+    } catch (e) {
+      console.error('Error saving tips cache to DB:', e);
+    }
   }
 
   private mapRowToHistoricalMatch(row: Record<string, SqlValue>): HistoricalMatch {

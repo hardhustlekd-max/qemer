@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { db } from '../core/db.js';
 import { FootballDataCSVParser } from '../core/csvParser.js';
-import { PREMIER_LEAGUE_HISTORICAL_CSV, INITIAL_UPCOMING_FIXTURES } from '../core/seedData.js';
 
 export const statsRouter = Router();
 
@@ -25,18 +24,22 @@ statsRouter.post('/seed', (req, res) => {
       db.clearHistoricalData();
     }
 
-    const csvToParse = customCsv && customCsv.trim().length > 0 ? customCsv : PREMIER_LEAGUE_HISTORICAL_CSV;
-    const parsedMatches = FootballDataCSVParser.parseCSV(csvToParse, defaultSeason || '2024/2025');
+    if (!customCsv || customCsv.trim().length === 0) {
+      const stats = db.getStatsSummary();
+      return res.json({
+        success: true,
+        message: 'No CSV data provided. Database ready for dataset upload.',
+        stats,
+      });
+    }
+
+    const parsedMatches = FootballDataCSVParser.parseCSV(customCsv, defaultSeason || '2024/2025');
     const inserted = db.insertHistoricalMatches(parsedMatches);
-
-    // Refresh upcoming fixtures
-    db.insertUpcomingFixtures(INITIAL_UPCOMING_FIXTURES);
-
     const stats = db.getStatsSummary();
 
     res.json({
       success: true,
-      message: `Database successfully seeded with ${inserted} matches from structured Football-Data dataset.`,
+      message: `Database successfully ingested ${inserted} matches from CSV dataset.`,
       stats,
     });
   } catch (err: any) {

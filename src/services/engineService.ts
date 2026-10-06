@@ -5,12 +5,14 @@ import {
   AccumulatorSlip,
   HistoricalMatch,
   MarketOption,
+  TrendingTipsData,
 } from '../core/types.js';
 import { PoissonEngine } from '../core/poisson.js';
 import { AccumulatorGenerator, AccaGenerationParams } from '../core/accumulator.js';
 import { FootballDataCSVParser } from '../core/csvParser.js';
-import { PREMIER_LEAGUE_HISTORICAL_CSV, INITIAL_UPCOMING_FIXTURES } from '../core/seedData.js';
+import { getRelativeDateStr } from '../core/seedData.js';
 import { LiveScore } from '../providers/types.js';
+import { fetchRealLiveScores } from './realLiveScoresService.js';
 
 // Default In-Memory Engine State for Universal & Client-Side execution (Vercel, Static, etc.)
 let localSettings: EngineSettings = {
@@ -23,8 +25,8 @@ let localSettings: EngineSettings = {
   autoSyncDaily: true,
 };
 
-let localHistoricalMatches: HistoricalMatch[] = FootballDataCSVParser.parseCSV(PREMIER_LEAGUE_HISTORICAL_CSV);
-let localUpcomingFixtures: Fixture[] = [...INITIAL_UPCOMING_FIXTURES];
+let localHistoricalMatches: HistoricalMatch[] = [];
+let localUpcomingFixtures: Fixture[] = [];
 
 const PROVIDER_METADATA: ProviderStatus[] = [
   {
@@ -86,8 +88,20 @@ export class EngineService {
   /**
    * Fetches fixtures - queries /api/fixtures, and transparently falls back to in-memory Poisson calculations if deployed statically (e.g. Vercel)
    */
-  public static async getFixtures(league = 'ALL'): Promise<Fixture[]> {
-    const url = league !== 'ALL' ? `/api/fixtures?league=${encodeURIComponent(league)}` : '/api/fixtures';
+  public static async getFixtures(
+    league = 'ALL',
+    dateFilter?: string,
+    customStartDate?: string,
+    customEndDate?: string
+  ): Promise<Fixture[]> {
+    const params = new URLSearchParams();
+    if (league !== 'ALL') params.set('league', league);
+    if (dateFilter && dateFilter !== 'ALL') params.set('dateFilter', dateFilter);
+    if (customStartDate) params.set('startDate', customStartDate);
+    if (customEndDate) params.set('endDate', customEndDate);
+
+    const query = params.toString();
+    const url = query ? `/api/fixtures?${query}` : '/api/fixtures';
     const serverData = await this.safeJsonFetch(url);
 
     if (serverData && serverData.success && Array.isArray(serverData.fixtures) && serverData.fixtures.length > 0) {
@@ -95,19 +109,44 @@ export class EngineService {
     }
 
     // Client-side fallback calculation with pure Poisson mathematical engine
-    return this.calculateLocalFixtures(league);
+    return this.calculateLocalFixtures(league, dateFilter, customStartDate, customEndDate);
   }
 
   /**
    * Pure Client-Side Poisson calculation over local fixtures
    */
-  public static calculateLocalFixtures(leagueFilter = 'ALL'): Fixture[] {
-    let fixturesToProcess = [...localUpcomingFixtures];
+  public static calculateLocalFixtures(
+    leagueFilter = 'ALL',
+    dateFilter = 'ALL',
+    customStartDate?: string,
+    customEndDate?: string
+  ): Fixture[] {
+    const todayStr = getRelativeDateStr(0);
+    const tomorrowStr = getRelativeDateStr(1);
+    const next3DaysStr = getRelativeDateStr(2);
+    const thisWeekStr = getRelativeDateStr(6);
+
+    let fixturesToProcess = localUpcomingFixtures
+      .filter((f) => f.matchDate >= todayStr)
+      .map((f) => ({ ...f }));
 
     if (leagueFilter && leagueFilter !== 'ALL') {
       fixturesToProcess = fixturesToProcess.filter(
         (f) => f.league.toUpperCase() === leagueFilter.toUpperCase()
       );
+    }
+
+    if (dateFilter === 'TODAY') {
+      fixturesToProcess = fixturesToProcess.filter((f) => f.matchDate === todayStr);
+    } else if (dateFilter === 'TOMORROW') {
+      fixturesToProcess = fixturesToProcess.filter((f) => f.matchDate === tomorrowStr);
+    } else if (dateFilter === 'NEXT_3_DAYS') {
+      fixturesToProcess = fixturesToProcess.filter((f) => f.matchDate >= todayStr && f.matchDate <= next3DaysStr);
+    } else if (dateFilter === 'THIS_WEEK') {
+      fixturesToProcess = fixturesToProcess.filter((f) => f.matchDate >= todayStr && f.matchDate <= thisWeekStr);
+    } else if (dateFilter === 'CUSTOM') {
+      if (customStartDate) fixturesToProcess = fixturesToProcess.filter((f) => f.matchDate >= customStartDate);
+      if (customEndDate) fixturesToProcess = fixturesToProcess.filter((f) => f.matchDate <= customEndDate);
     }
 
     return fixturesToProcess.map((f) => {
@@ -241,46 +280,16 @@ export class EngineService {
    */
   public static async getLiveScores(): Promise<LiveScore[]> {
     const serverData = await this.safeJsonFetch('/api/providers/live-scores');
-    if (serverData && serverData.success && Array.isArray(serverData.scores)) {
+    if (serverData && serverData.success && Array.isArray(serverData.scores) && serverData.scores.length > 0) {
       return serverData.scores;
     }
 
-    return [
-      {
-        fixtureId: 'e0_brighton_nottingham_today',
-        homeTeam: 'Brighton',
-        awayTeam: "Nott'm Forest",
-        homeScore: 1,
-        awayScore: 0,
-        minute: 34,
-        status: 'FIRST_HALF',
-        events: [{ minute: 18, type: 'GOAL', team: 'HOME', player: 'Welbeck' }],
-      },
-      {
-        fixtureId: 'sp1_valencia_girona_today',
-        homeTeam: 'Valencia',
-        awayTeam: 'Girona',
-        homeScore: 2,
-        awayScore: 1,
-        minute: 67,
-        status: 'SECOND_HALF',
-        events: [
-          { minute: 23, type: 'GOAL', team: 'HOME', player: 'Hugo Duro' },
-          { minute: 49, type: 'GOAL', team: 'AWAY', player: 'Dovbyk' },
-          { minute: 61, type: 'GOAL', team: 'HOME', player: 'Javi Guerra' },
-        ],
-      },
-      {
-        fixtureId: 'd1_stuttgart_dortmund_today',
-        homeTeam: 'VfB Stuttgart',
-        awayTeam: 'Borussia Dortmund',
-        homeScore: 0,
-        awayScore: 0,
-        minute: 12,
-        status: 'FIRST_HALF',
-        events: [],
-      },
-    ];
+    const realScores = await fetchRealLiveScores();
+    if (realScores && realScores.length > 0) {
+      return realScores;
+    }
+
+    return [];
   }
 
   /**
@@ -323,15 +332,48 @@ export class EngineService {
       localHistoricalMatches = [];
     }
 
-    const csvToParse = customCsv && customCsv.trim().length > 0 ? customCsv : PREMIER_LEAGUE_HISTORICAL_CSV;
-    const parsed = FootballDataCSVParser.parseCSV(csvToParse);
-    localHistoricalMatches = [...localHistoricalMatches, ...parsed];
+    if (customCsv && customCsv.trim().length > 0) {
+      const parsed = FootballDataCSVParser.parseCSV(customCsv);
+      localHistoricalMatches = [...localHistoricalMatches, ...parsed];
+
+      const stats = await this.getStats();
+      return {
+        success: true,
+        message: `Parsed & ingested ${parsed.length} historical matches into local Poisson engine!`,
+        stats,
+      };
+    }
 
     const stats = await this.getStats();
     return {
       success: true,
-      message: `Parsed & ingested ${parsed.length} historical matches into local Poisson engine!`,
+      message: `Database state updated.`,
       stats,
     };
+  }
+
+  /**
+   * Fetches trending football tips & headlines grounded by Google Search
+   */
+  public static async getTrendingTips(): Promise<TrendingTipsData | null> {
+    const serverData = await this.safeJsonFetch('/api/tips');
+    if (serverData && serverData.success && serverData.data) {
+      return serverData.data;
+    }
+    return null;
+  }
+
+  /**
+   * Forces refresh of trending football tips & headlines with Google Search
+   */
+  public static async refreshTrendingTips(): Promise<TrendingTipsData | null> {
+    const serverData = await this.safeJsonFetch('/api/tips/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (serverData && serverData.success && serverData.data) {
+      return serverData.data;
+    }
+    return null;
   }
 }

@@ -5,6 +5,7 @@ import {
   EngineSettings,
   MarketOption,
 } from './types.js';
+import { getRelativeDateStr } from './seedData.js';
 
 export interface AccaGenerationParams {
   strategy: 'BANKER' | 'VALUE_HUNTER' | 'CUSTOM';
@@ -13,11 +14,14 @@ export interface AccaGenerationParams {
   minProbability?: number;
   stake?: number;
   allowedMarkets?: MarketOption['key'][];
+  dateFilter?: 'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM' | string;
+  customStartDate?: string;
+  customEndDate?: string;
 }
 
 export class AccumulatorGenerator {
   /**
-   * Generates an accumulator slip based on selected strategy and constraints
+   * Generates an accumulator slip based on selected strategy, date range, and constraints
    */
   public static generateSlip(
     fixtures: Fixture[],
@@ -26,16 +30,56 @@ export class AccumulatorGenerator {
   ): AccumulatorSlip {
     const stake = params.stake && params.stake > 0 ? params.stake : 10;
     const strategy = params.strategy || 'BANKER';
+    const dateFilter = params.dateFilter || 'TODAY';
 
-    let availableLegs = this.extractAllCandidateLegs(fixtures, params.allowedMarkets);
+    const todayStr = getRelativeDateStr(0);
+    const tomorrowStr = getRelativeDateStr(1);
+    const next3DaysStr = getRelativeDateStr(2);
+    const thisWeekStr = getRelativeDateStr(6);
+
+    // Filter candidate fixtures according to the specified date filter
+    let candidateFixtures = fixtures.filter((f) => {
+      // Exclude matches in the past
+      if (f.matchDate < todayStr) return false;
+
+      if (dateFilter === 'TODAY') {
+        return f.matchDate === todayStr;
+      } else if (dateFilter === 'TOMORROW') {
+        return f.matchDate === tomorrowStr;
+      } else if (dateFilter === 'NEXT_3_DAYS') {
+        return f.matchDate >= todayStr && f.matchDate <= next3DaysStr;
+      } else if (dateFilter === 'THIS_WEEK') {
+        return f.matchDate >= todayStr && f.matchDate <= thisWeekStr;
+      } else if (dateFilter === 'CUSTOM') {
+        if (params.customStartDate && f.matchDate < params.customStartDate) return false;
+        if (params.customEndDate && f.matchDate > params.customEndDate) return false;
+        return true;
+      }
+      return true; // ALL
+    });
+
+    const targetLegCount = params.legCount || (strategy === 'BANKER' ? 3 : 4);
+
+    // If matches within filtered date are fewer than required legs,
+    // top up from the nearest upcoming matches (preserving today's matches as top priority)
+    if (candidateFixtures.length < targetLegCount) {
+      const additionalFixtures = fixtures
+        .filter((f) => f.matchDate >= todayStr && !candidateFixtures.some((c) => c.id === f.id))
+        .sort((a, b) => a.matchDate.localeCompare(b.matchDate) || a.kickOffTime.localeCompare(b.kickOffTime));
+      candidateFixtures = [...candidateFixtures, ...additionalFixtures];
+    }
+
+    let availableLegs = this.extractAllCandidateLegs(candidateFixtures, params.allowedMarkets);
 
     let selectedLegs: AccaLeg[] = [];
     let slipName = '';
 
+    const isToday = dateFilter === 'TODAY';
+
     if (strategy === 'BANKER') {
       const minProb = params.minProbability || settings.safeWinThreshold || 0.70;
-      const legCount = params.legCount || 3;
-      slipName = '🛡️ The Banker (High Safety)';
+      const legCount = targetLegCount;
+      slipName = isToday ? "🛡️ Today's Banker (High Safety)" : '🛡️ The Banker (High Safety)';
 
       // Filter for candidate legs >= minProb
       const bankers = availableLegs
@@ -54,8 +98,10 @@ export class AccumulatorGenerator {
       }
     } else if (strategy === 'VALUE_HUNTER') {
       const minEV = settings.minEVThreshold || 1.10;
-      const legCount = params.legCount || 4;
-      slipName = '⚡ The Value Hunter (+EV Edge)';
+      const legCount = targetLegCount;
+      slipName = isToday
+        ? (legCount >= 8 ? `🔥 Today's ${legCount}-Fold Value Slip` : "⚡ Today's Value Hunter (+EV Edge)")
+        : '⚡ The Value Hunter (+EV Edge)';
 
       // Filter for legs with positive EV (prob * odds >= minEV)
       const valueLegs = availableLegs
@@ -75,9 +121,11 @@ export class AccumulatorGenerator {
     } else {
       // CUSTOM Multi-leg with Target Odds & Constraints
       const targetOdds = params.targetOdds || 10.0;
-      const legCount = params.legCount || 4;
+      const legCount = targetLegCount;
       const minProb = params.minProbability || 0.50;
-      slipName = `🎯 Custom Target Acca (${legCount}-Fold ~${targetOdds}x)`;
+      slipName = isToday
+        ? `🎯 Today's Custom Acca (${legCount}-Fold ~${targetOdds}x)`
+        : `🎯 Custom Target Acca (${legCount}-Fold ~${targetOdds}x)`;
 
       const qualifiedLegs = availableLegs.filter((leg) => leg.probability >= minProb);
       selectedLegs = this.optimizeCustomSlip(qualifiedLegs, legCount, targetOdds);

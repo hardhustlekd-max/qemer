@@ -1,7 +1,8 @@
 import { APIProvider, LiveOddsUpdate, LiveScore } from './types.js';
 import { Fixture } from '../core/types.js';
 import { db } from '../core/db.js';
-import { INITIAL_UPCOMING_FIXTURES } from '../core/seedData.js';
+import { fetchRealLiveScores } from '../services/realLiveScoresService.js';
+import { fetchRealUpcomingFixtures } from '../services/realUpcomingFixturesService.js';
 
 export class FootballDataOrgProvider implements APIProvider {
   id = 'FOOTBALL_DATA_ORG' as const;
@@ -16,10 +17,12 @@ export class FootballDataOrgProvider implements APIProvider {
   ];
 
   async getUpcomingFixtures(date?: string): Promise<Fixture[]> {
-    const raw = db.getUpcomingFixtures();
-    const base = raw.length > 0 ? raw : INITIAL_UPCOMING_FIXTURES;
+    let raw = db.getUpcomingFixtures(undefined, date);
+    if (raw.length === 0) {
+      raw = await fetchRealUpcomingFixtures();
+    }
 
-    return base.map((f) => ({
+    return raw.map((f) => ({
       ...f,
       providerId: 'FOOTBALL_DATA_ORG',
       status: 'TIMED',
@@ -39,28 +42,15 @@ export class FootballDataOrgProvider implements APIProvider {
   }
 
   async getLiveScores(): Promise<LiveScore[]> {
-    return [
-      {
-        fixtureId: 'i1_inter_milan_today',
-        homeTeam: 'Inter',
-        awayTeam: 'Milan',
-        homeScore: 1,
-        awayScore: 1,
-        minute: 54,
-        status: 'SECOND_HALF',
-        events: [
-          { minute: 21, type: 'GOAL', team: 'Inter', player: 'Lautaro' },
-          { minute: 49, type: 'GOAL', team: 'Milan', player: 'Pulisic' },
-        ],
-      },
-    ];
+    return fetchRealLiveScores();
   }
 
   async syncHistoricalData(): Promise<{ success: boolean; matchesCount: number; message: string }> {
+    const fixtures = await fetchRealUpcomingFixtures();
     return {
       success: true,
-      matchesCount: 95,
-      message: 'Football-Data.org API refreshed season fixtures across 5 major European leagues.',
+      matchesCount: fixtures.length,
+      message: `Football-Data.org API refreshed ${fixtures.length} live season fixtures.`,
     };
   }
 }

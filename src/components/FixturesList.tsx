@@ -13,6 +13,10 @@ interface FixturesListProps {
   isLegInSlip: (fixtureId: string, marketKey: MarketOption['key']) => boolean;
   selectedLeague: string;
   onSelectLeague: (league: string) => void;
+  onGenerateAcca?: (params: any) => void;
+  onQuickGenerate?: (strategy: 'BANKER' | 'VALUE_HUNTER', dateFilter?: string) => void;
+  onToggleCustomSlip?: () => void;
+  isCustomSlipOpen?: boolean;
 }
 
 export const FixturesList: React.FC<FixturesListProps> = ({
@@ -23,6 +27,10 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   isLegInSlip,
   selectedLeague,
   onSelectLeague,
+  onGenerateAcca,
+  onQuickGenerate,
+  onToggleCustomSlip,
+  isCustomSlipOpen,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM'>('TODAY');
@@ -31,6 +39,25 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   const [filterType, setFilterType] = useState<'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG'>('ALL');
   const [viewMode, setViewMode] = useState<'WIREFRAME' | 'CARDS'>('WIREFRAME');
   const [marketChoiceFilter, setMarketChoiceFilter] = useState<'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS'>('BEST_VALUE');
+
+  const handleQuickSlipSelect = (value: string) => {
+    if (!value) return;
+    if (value === 'TODAY_SLIP') {
+      onGenerateAcca?.({
+        strategy: 'VALUE_HUNTER',
+        legCount: 10,
+        minProbability: 0.50,
+        stake: 10,
+        dateFilter: 'TODAY',
+      });
+    } else if (value === 'SAFE_PICKS') {
+      onQuickGenerate?.('BANKER', dateFilter);
+    } else if (value === 'TOP_VALUE') {
+      onQuickGenerate?.('VALUE_HUNTER', dateFilter);
+    } else if (value === 'CUSTOM_SLIP') {
+      onToggleCustomSlip?.();
+    }
+  };
 
   const dateOptions = [
     { key: 'TODAY' as const, label: "Today's Picks" },
@@ -119,26 +146,61 @@ export const FixturesList: React.FC<FixturesListProps> = ({
       <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 p-2.5 sm:p-3 rounded-2xl shadow-xs space-y-2">
         {/* Controls Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center">
-          {/* Date Range Dropdown Filter (Defaulted to Today) */}
-          <div className="col-span-1 lg:col-span-3 relative min-w-0">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate flex items-center gap-1">
-              <Calendar className="w-3 h-3 text-emerald-500" />
-              <span>Date Range</span>
+          {/* Date Range & Quick Slips Section (Defaulted to Today) */}
+          <div className="col-span-2 lg:col-span-4 relative min-w-0">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-emerald-500" />
+                <span>Date Range &amp; Slips</span>
+              </span>
             </label>
-            <div className="relative">
-              <select
-                id="date-filter-dropdown"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value as any)}
-                className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
-              >
-                {dateOptions.map((opt) => (
-                  <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
-                    {opt.label}
+            <div className="grid grid-cols-2 gap-1.5">
+              {/* Date Filter Dropdown */}
+              <div className="relative min-w-0">
+                <select
+                  id="date-filter-dropdown"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value as any)}
+                  className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+                >
+                  {dateOptions.map((opt) => (
+                    <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+              </div>
+
+              {/* Quick Slip Dropdown (Today's Slip, Safe Picks, Top Value) */}
+              <div className="relative min-w-0">
+                <select
+                  id="quick-slips-dropdown"
+                  defaultValue=""
+                  onChange={(e) => {
+                    handleQuickSlipSelect(e.target.value);
+                    e.target.value = '';
+                  }}
+                  className="w-full bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl px-2.5 py-1.5 text-xs font-bold text-red-700 dark:text-red-400 appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+                >
+                  <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-500">
+                    ⚡ Quick Slip...
                   </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+                  <option value="TODAY_SLIP" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    🔥 Today&apos;s Slip
+                  </option>
+                  <option value="SAFE_PICKS" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    🛡️ Safe Picks
+                  </option>
+                  <option value="TOP_VALUE" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    ✨ Top Value
+                  </option>
+                  <option value="CUSTOM_SLIP" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    🎯 {isCustomSlipOpen ? 'Hide Custom Slip' : 'Custom Slip Builder'}
+                  </option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-red-500 dark:text-red-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+              </div>
             </div>
           </div>
 
@@ -211,7 +273,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
           )}
 
           {/* Search & View Toggle Column */}
-          <div className={`${viewMode === 'WIREFRAME' ? 'col-span-2 sm:col-span-2 lg:col-span-3' : 'col-span-2 sm:col-span-2 lg:col-span-5'} flex flex-col justify-end min-w-0`}>
+          <div className={`${viewMode === 'WIREFRAME' ? 'col-span-2 sm:col-span-2 lg:col-span-2' : 'col-span-2 sm:col-span-2 lg:col-span-4'} flex flex-col justify-end min-w-0`}>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
               Search &amp; View
             </label>
@@ -268,7 +330,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-mono font-semibold text-slate-900 dark:text-white"
+                className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none"
               />
             </div>
             <div className="flex items-center gap-1">
@@ -277,7 +339,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-mono font-semibold text-slate-900 dark:text-white"
+                className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none"
               />
             </div>
           </div>
