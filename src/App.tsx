@@ -16,7 +16,8 @@ import {
 } from './core/types.js';
 import { LiveScore } from './providers/types.js';
 import { AccaGenerationParams } from './core/accumulator.js';
-import { Shield, Sparkles, TrendingUp, Cpu, Database, RefreshCw, BarChart } from 'lucide-react';
+import { EngineService } from './services/engineService.js';
+import { TrendingUp } from 'lucide-react';
 
 export default function App() {
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
@@ -51,12 +52,8 @@ export default function App() {
   const fetchFixtures = useCallback(async (league = selectedLeague) => {
     try {
       setIsLoadingFixtures(true);
-      const url = league !== 'ALL' ? `/api/fixtures?league=${league}` : '/api/fixtures';
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.success) {
-        setFixtures(data.fixtures);
-      }
+      const data = await EngineService.getFixtures(league);
+      setFixtures(data);
     } catch (e) {
       console.error('Failed to fetch fixtures:', e);
     } finally {
@@ -66,15 +63,15 @@ export default function App() {
 
   const fetchSettingsAndProviders = useCallback(async () => {
     try {
-      const [sRes, pRes, statsRes] = await Promise.all([
-        fetch('/api/settings').then((r) => r.json()),
-        fetch('/api/providers').then((r) => r.json()),
-        fetch('/api/stats').then((r) => r.json()),
+      const [sData, pData, statsData] = await Promise.all([
+        EngineService.getSettings(),
+        EngineService.getProviders(),
+        EngineService.getStats(),
       ]);
 
-      if (sRes.success) setSettings(sRes.settings);
-      if (pRes.success) setProviders(pRes.providers);
-      if (statsRes.success) setStats(statsRes.stats);
+      setSettings(sData);
+      setProviders(pData);
+      setStats(statsData);
     } catch (e) {
       console.error('Failed to fetch settings/providers/stats:', e);
     }
@@ -82,11 +79,8 @@ export default function App() {
 
   const fetchLiveScores = useCallback(async () => {
     try {
-      const res = await fetch('/api/providers/live-scores');
-      const data = await res.json();
-      if (data.success) {
-        setLiveScores(data.scores || []);
-      }
+      const scores = await EngineService.getLiveScores();
+      setLiveScores(scores);
     } catch (e) {
       // non-blocking
     }
@@ -106,19 +100,14 @@ export default function App() {
     fetchFixtures(league);
   };
 
-  // Generate Accumulator via API
+  // Generate Accumulator via API / EngineService
   const handleGenerateAcca = async (params: AccaGenerationParams) => {
     try {
       setIsGeneratingAcca(true);
-      const res = await fetch('/api/accumulator/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      const data = await res.json();
-      if (data.success && data.slip) {
-        setActiveSlip(data.slip);
-        showNotification(`Generated ${data.slip.name} with ${data.slip.legs.length} legs!`);
+      const slip = await EngineService.generateAccumulator(params);
+      if (slip) {
+        setActiveSlip(slip);
+        showNotification(`Generated ${slip.name} with ${slip.legs.length} legs!`);
       }
     } catch (e) {
       console.error('Failed to generate accumulator:', e);
@@ -254,17 +243,10 @@ export default function App() {
   // Provider Hot Swapping
   const handleProviderChange = async (providerId: EngineSettings['activeProvider']) => {
     try {
-      const res = await fetch('/api/providers/switch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ providerId }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSettings((prev) => (prev ? { ...prev, activeProvider: providerId } : null));
-        showNotification(`Hot-swapped to ${data.activeProvider}`);
-        fetchFixtures();
-      }
+      await EngineService.switchProvider(providerId);
+      setSettings((prev) => (prev ? { ...prev, activeProvider: providerId } : null));
+      showNotification(`Hot-swapped provider to ${providerId}`);
+      fetchFixtures();
     } catch (e) {
       console.error('Failed to switch provider:', e);
     }
@@ -273,17 +255,11 @@ export default function App() {
   // Save Settings
   const handleSaveSettings = async (newSettings: Partial<EngineSettings>) => {
     try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newSettings),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSettings(data.settings);
-        fetchFixtures();
-        fetchSettingsAndProviders();
-      }
+      const updated = await EngineService.updateSettings(newSettings);
+      setSettings(updated);
+      fetchFixtures();
+      fetchSettingsAndProviders();
+      showNotification('Poisson parameters updated!');
     } catch (e) {
       console.error('Failed to update settings:', e);
     }
@@ -293,16 +269,11 @@ export default function App() {
   const handleReSeedDatabase = async (customCsv?: string, reset = false) => {
     try {
       setIsSeeding(true);
-      const res = await fetch('/api/stats/seed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customCsv, reset }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setStats(data.stats);
+      const res = await EngineService.seedDatabase(customCsv, reset);
+      if (res.success) {
+        setStats(res.stats);
         fetchFixtures();
-        showNotification(data.message);
+        showNotification(res.message);
       }
     } catch (e) {
       console.error('Failed to seed database:', e);

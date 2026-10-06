@@ -1,5 +1,85 @@
-import { parse } from 'csv-parse/sync';
 import { HistoricalMatch, LeagueCode } from './types.js';
+
+/**
+ * Pure TypeScript CSV parser that works universally in Node.js and Browser environments without Node Buffer dependencies
+ */
+function parseCSVToRecords(csvText: string): Record<string, string>[] {
+  if (!csvText || !csvText.trim()) return [];
+
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+
+  // Normalize newlines
+  const text = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (nextChar === '"') {
+          currentField += '"';
+          i++; // skip next quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        currentField += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        currentRow.push(currentField.trim());
+        currentField = '';
+      } else if (char === '\n') {
+        currentRow.push(currentField.trim());
+        if (currentRow.length > 1 || (currentRow.length === 1 && currentRow[0] !== '')) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+  }
+
+  if (currentField.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentField.trim());
+    if (currentRow.length > 1 || (currentRow.length === 1 && currentRow[0] !== '')) {
+      rows.push(currentRow);
+    }
+  }
+
+  if (rows.length < 2) return [];
+
+  // Strip BOM if present in first header
+  const headers = rows[0].map((h) => h.replace(/^\uFEFF/, '').trim());
+  const result: Record<string, string>[] = [];
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const record: Record<string, string> = {};
+    let hasData = false;
+    for (let c = 0; c < headers.length; c++) {
+      const header = headers[c];
+      if (header) {
+        const val = row[c] !== undefined ? row[c] : '';
+        record[header] = val;
+        if (val) hasData = true;
+      }
+    }
+    if (hasData) {
+      result.push(record);
+    }
+  }
+
+  return result;
+}
 
 export class FootballDataCSVParser {
   /**
@@ -10,12 +90,7 @@ export class FootballDataCSVParser {
 
     let records: Record<string, string>[];
     try {
-      records = parse(csvContent, {
-        columns: true,
-        skip_empty_lines: true,
-        trim: true,
-        relax_column_count: true,
-      });
+      records = parseCSVToRecords(csvContent);
     } catch (e) {
       console.error('CSV parse error:', e);
       return [];
@@ -48,8 +123,8 @@ export class FootballDataCSVParser {
       const id = `${div}_${season.replace('/', '-')}_${homeTeam.replace(/\s+/g, '')}_${awayTeam.replace(/\s+/g, '')}_${formattedDate}`.toLowerCase();
 
       // Half time stats
-      const hthg = row['HTHG'] !== undefined ? parseInt(row['HTHG'], 10) : undefined;
-      const htag = row['HTAG'] !== undefined ? parseInt(row['HTAG'], 10) : undefined;
+      const hthg = row['HTHG'] !== undefined && row['HTHG'] !== '' ? parseInt(row['HTHG'], 10) : undefined;
+      const htag = row['HTAG'] !== undefined && row['HTAG'] !== '' ? parseInt(row['HTAG'], 10) : undefined;
       const htr = (row['HTR'] || '').toUpperCase() as 'H' | 'D' | 'A' | undefined;
 
       // Shots
