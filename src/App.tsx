@@ -17,9 +17,10 @@ import {
 import { LiveScore } from './providers/types.js';
 import { AccaGenerationParams } from './core/accumulator.js';
 import { EngineService } from './services/engineService.js';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Sparkles, Shield, Target, Sliders, Dices } from 'lucide-react';
 
 export default function App() {
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [isLoadingFixtures, setIsLoadingFixtures] = useState<boolean>(true);
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
@@ -36,6 +37,7 @@ export default function App() {
   // Accumulator Ticket Slip state
   const [activeSlip, setActiveSlip] = useState<AccumulatorSlip | null>(null);
   const [isGeneratingAcca, setIsGeneratingAcca] = useState<boolean>(false);
+  const [showAccaBuilder, setShowAccaBuilder] = useState<boolean>(false);
 
   // Modals
   const [selectedDetailFixture, setSelectedDetailFixture] = useState<Fixture | null>(null);
@@ -47,6 +49,25 @@ export default function App() {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3500);
   };
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    if (nextTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  useEffect(() => {
+    // initialize theme
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   // Fetch initial fixtures and settings
   const fetchFixtures = useCallback(async (league = selectedLeague) => {
@@ -128,7 +149,6 @@ export default function App() {
   // Manual Add / Remove Leg to/from Ticket Slip
   const handleAddLegToSlip = (leg: AccaLeg) => {
     if (!activeSlip) {
-      // Initialize new slip
       const newSlip: AccumulatorSlip = {
         id: `slip_${Date.now()}`,
         name: '🎯 Custom Slip Builder',
@@ -150,19 +170,16 @@ export default function App() {
       return;
     }
 
-    // Check if fixture already in slip
     const existingIndex = activeSlip.legs.findIndex((l) => l.fixtureId === leg.fixtureId);
     let updatedLegs: AccaLeg[];
 
     if (existingIndex >= 0) {
-      // Replace existing leg from same fixture
       updatedLegs = [...activeSlip.legs];
       updatedLegs[existingIndex] = leg;
     } else {
       updatedLegs = [...activeSlip.legs, leg];
     }
 
-    // Recalculate combined stats
     let totalOdds = 1.0;
     let totalProb = 1.0;
     for (const l of updatedLegs) {
@@ -240,7 +257,6 @@ export default function App() {
     return activeSlip.legs.some((l) => l.fixtureId === fixtureId && l.marketKey === marketKey);
   };
 
-  // Provider Hot Swapping
   const handleProviderChange = async (providerId: EngineSettings['activeProvider']) => {
     try {
       await EngineService.switchProvider(providerId);
@@ -252,7 +268,6 @@ export default function App() {
     }
   };
 
-  // Save Settings
   const handleSaveSettings = async (newSettings: Partial<EngineSettings>) => {
     try {
       const updated = await EngineService.updateSettings(newSettings);
@@ -265,7 +280,6 @@ export default function App() {
     }
   };
 
-  // Re-Seed Database
   const handleReSeedDatabase = async (customCsv?: string, reset = false) => {
     try {
       setIsSeeding(true);
@@ -283,12 +297,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080C14] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-slate-100 dark:bg-[#070A0F] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed bottom-5 right-5 z-50 bg-emerald-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-xl shadow-black/50 border border-emerald-400 flex items-center gap-2 animate-in slide-in-from-bottom-2">
-          <span>✨</span>
-          <span>{notification.message}</span>
+        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 dark:bg-emerald-600 text-white font-bold text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-2">
+          <Sparkles className="w-4 h-4 text-emerald-400 dark:text-white shrink-0" />
+          <span className="truncate max-w-[260px]">{notification.message}</span>
         </div>
       )}
 
@@ -302,6 +316,8 @@ export default function App() {
         onQuickGenerate={handleQuickGenerate}
         onProviderChange={handleProviderChange}
         isSyncing={isLoadingFixtures}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Live In-Play Scores Ticker */}
@@ -311,48 +327,64 @@ export default function App() {
       />
 
       {/* Main Content Dashboard */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
-        {/* Top Summary Banner */}
-        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-slate-950/90 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                Poisson Distribution Mathematical AI Model
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-emerald-800/40">
-                  Rolling Window: {settings?.rollingMatchWindow || 15} Matches
-                </span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Evaluating attack/defense ratings, expected goals ($xG$), and +EV closing value edges against bookmakers.
-              </p>
-            </div>
+      <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-5 space-y-5">
+        {/* Top Wireframe Quick Generation Action Chips */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl shadow-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => {
+                handleGenerateAcca({
+                  strategy: 'VALUE_HUNTER',
+                  legCount: 10,
+                  minProbability: 0.50,
+                  stake: 10,
+                });
+              }}
+              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+            >
+              <span>🔥</span>
+              <span>Today's Slip</span>
+            </button>
+
+            <button
+              onClick={() => handleQuickGenerate('BANKER')}
+              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 flex items-center gap-1 transition-all cursor-pointer"
+            >
+              <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Safe Picks</span>
+            </button>
+
+            <button
+              onClick={() => handleQuickGenerate('VALUE_HUNTER')}
+              className="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 flex items-center gap-1 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Top Value</span>
+            </button>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-mono">
-            <div className="text-center">
-              <div className="text-slate-400 text-[10px]">Indexed Matches</div>
-              <div className="text-white font-bold text-sm">{stats.totalMatches}</div>
-            </div>
-            <div className="h-6 w-px bg-slate-800" />
-            <div className="text-center">
-              <div className="text-slate-400 text-[10px]">Active Leagues</div>
-              <div className="text-emerald-400 font-bold text-sm">{stats.leagues.length || 4}</div>
-            </div>
-            <div className="h-6 w-px bg-slate-800" />
-            <div className="text-center">
-              <div className="text-slate-400 text-[10px]">EV Threshold</div>
-              <div className="text-amber-400 font-bold text-sm">+{((settings?.minEVThreshold || 1.10) * 100 - 100).toFixed(0)}%</div>
-            </div>
-          </div>
+          <button
+            onClick={() => setShowAccaBuilder(!showAccaBuilder)}
+            className="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-1 transition-all cursor-pointer"
+          >
+            <Sliders className="w-3.5 h-3.5 text-indigo-500" />
+            <span>{showAccaBuilder ? 'Hide Custom' : 'Custom Slip'}</span>
+          </button>
         </div>
 
-        {/* 2-Column Responsive Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left / Center Column: Fixtures List & Predictions (7 or 8 cols on desktop) */}
-          <div className="lg:col-span-8 space-y-4">
+        {/* Collapsible Acca Configurator Panel */}
+        {showAccaBuilder && (
+          <div className="animate-in fade-in slide-in-from-top-3">
+            <AccaConfigurator
+              onGenerate={handleGenerateAcca}
+              isGenerating={isGeneratingAcca}
+            />
+          </div>
+        )}
+
+        {/* Central Wireframe View Matching Attachment */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className={`${activeSlip && activeSlip.legs.length > 0 ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-4`}>
             <FixturesList
               fixtures={fixtures}
               isLoading={isLoadingFixtures}
@@ -364,22 +396,17 @@ export default function App() {
             />
           </div>
 
-          {/* Right Column: Acca Configurator & Ticket Slip (4 cols on desktop) */}
-          <div className="lg:col-span-4 space-y-5 sticky top-20">
-            {/* Acca Configurator Widget */}
-            <AccaConfigurator
-              onGenerate={handleGenerateAcca}
-              isGenerating={isGeneratingAcca}
-            />
-
-            {/* Ticket Slip Display */}
-            <TicketSlip
-              slip={activeSlip}
-              onRemoveLeg={handleRemoveLeg}
-              onClearSlip={handleClearSlip}
-              onUpdateStake={handleUpdateStake}
-            />
-          </div>
+          {/* Side Ticket Slip if active */}
+          {activeSlip && activeSlip.legs.length > 0 && (
+            <div className="lg:col-span-4 sticky top-20 space-y-4 animate-in fade-in slide-in-from-right-2">
+              <TicketSlip
+                slip={activeSlip}
+                onRemoveLeg={handleRemoveLeg}
+                onClearSlip={handleClearSlip}
+                onUpdateStake={handleUpdateStake}
+              />
+            </div>
+          )}
         </div>
       </main>
 
@@ -404,3 +431,4 @@ export default function App() {
     </div>
   );
 }
+

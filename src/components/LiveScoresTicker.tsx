@@ -31,8 +31,8 @@ export const LiveScoresTicker: React.FC<LiveScoresTickerProps> = ({ liveScores, 
               </span>
               <span className="font-medium text-slate-200">{s.awayTeam}</span>
               {s.events && s.events.length > 0 && (
-                <span className="text-[10px] text-emerald-400 ml-1">
-                  ⚽ {s.events[s.events.length - 1].player} ({s.events[s.events.length - 1].minute}&apos;)
+                <span className="text-[10px] text-emerald-400 ml-1 truncate">
+                  GOAL: {s.events[s.events.length - 1].player} ({s.events[s.events.length - 1].minute}&apos;)
                 </span>
               )}
             </div>

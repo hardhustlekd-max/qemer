@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Sparkles, Shield, Flame, Filter, Layers } from 'lucide-react';
+import { Search, ChevronDown, Layers, LayoutList, LayoutGrid, Calendar } from 'lucide-react';
 import { Fixture, AccaLeg, MarketOption } from '../core/types.js';
+import { getRelativeDateStr } from '../core/seedData.js';
 import { FixtureCard } from './FixtureCard.js';
+import { SimplifiedPredictionsWireframe } from './SimplifiedPredictionsWireframe.js';
 
 interface FixturesListProps {
   fixtures: Fixture[];
@@ -23,9 +25,23 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   onSelectLeague,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM'>('TODAY');
+  const [customStartDate, setCustomStartDate] = useState(getRelativeDateStr(0));
+  const [customEndDate, setCustomEndDate] = useState(getRelativeDateStr(3));
   const [filterType, setFilterType] = useState<'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG'>('ALL');
+  const [viewMode, setViewMode] = useState<'WIREFRAME' | 'CARDS'>('WIREFRAME');
+  const [marketChoiceFilter, setMarketChoiceFilter] = useState<'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS'>('BEST_VALUE');
 
-  const leagueTabs = [
+  const dateOptions = [
+    { key: 'TODAY' as const, label: "Today's Picks" },
+    { key: 'TOMORROW' as const, label: 'Tomorrow' },
+    { key: 'NEXT_3_DAYS' as const, label: 'Next 3 Days' },
+    { key: 'THIS_WEEK' as const, label: 'This Week' },
+    { key: 'ALL' as const, label: 'All Dates' },
+    { key: 'CUSTOM' as const, label: 'Custom Range...' },
+  ];
+
+  const leagueOptions = [
     { code: 'ALL', name: 'All Leagues' },
     { code: 'E0', name: 'Premier League' },
     { code: 'SP1', name: 'La Liga' },
@@ -33,8 +49,41 @@ export const FixturesList: React.FC<FixturesListProps> = ({
     { code: 'I1', name: 'Serie A' },
   ];
 
+  const filterOptions = [
+    { key: 'ALL' as const, label: 'All Matches' },
+    { key: 'POSITIVE_EV' as const, label: 'Best Value' },
+    { key: 'BANKER' as const, label: 'Safe Picks' },
+    { key: 'HIGH_XG' as const, label: 'High Goals' },
+  ];
+
+  const marketOptions = [
+    { key: 'BEST_VALUE' as const, label: 'Top Picks' },
+    { key: 'OVER_UNDER' as const, label: 'Over/Under' },
+    { key: '1X2' as const, label: '1X2 Match Winner' },
+    { key: 'BTTS' as const, label: 'Both Teams to Score' },
+  ];
+
   const filteredFixtures = useMemo(() => {
+    const todayStr = getRelativeDateStr(0);
+    const tomorrowStr = getRelativeDateStr(1);
+    const next3DaysStr = getRelativeDateStr(2);
+    const thisWeekStr = getRelativeDateStr(6);
+
     return fixtures.filter((f) => {
+      // Date filtering - defaulted to TODAY
+      if (dateFilter === 'TODAY') {
+        if (f.matchDate !== todayStr) return false;
+      } else if (dateFilter === 'TOMORROW') {
+        if (f.matchDate !== tomorrowStr) return false;
+      } else if (dateFilter === 'NEXT_3_DAYS') {
+        if (f.matchDate < todayStr || f.matchDate > next3DaysStr) return false;
+      } else if (dateFilter === 'THIS_WEEK') {
+        if (f.matchDate < todayStr || f.matchDate > thisWeekStr) return false;
+      } else if (dateFilter === 'CUSTOM') {
+        if (customStartDate && f.matchDate < customStartDate) return false;
+        if (customEndDate && f.matchDate > customEndDate) return false;
+      }
+
       // League filter
       if (selectedLeague !== 'ALL' && f.league.toUpperCase() !== selectedLeague.toUpperCase()) {
         return false;
@@ -62,117 +111,202 @@ export const FixturesList: React.FC<FixturesListProps> = ({
 
       return true;
     });
-  }, [fixtures, selectedLeague, searchQuery, filterType]);
-
-  const totalEVCount = fixtures.filter((f) => f.markets?.some((m) => m.isPositiveEV)).length;
-  const totalBankerCount = fixtures.filter((f) => f.markets?.some((m) => m.isBanker)).length;
+  }, [fixtures, dateFilter, customStartDate, customEndDate, selectedLeague, searchQuery, filterType]);
 
   return (
-    <div className="space-y-4">
-      {/* League Filter Navigation Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 border border-slate-800 p-2 rounded-2xl">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-          {leagueTabs.map((tab) => (
-            <button
-              key={tab.code}
-              id={`league-tab-${tab.code.toLowerCase()}`}
-              onClick={() => onSelectLeague(tab.code)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                selectedLeague === tab.code
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-              }`}
-            >
-              {tab.name}
-            </button>
-          ))}
+    <div className="space-y-3 font-sans">
+      {/* Merged Mobile-Friendly Toolbar with Date Range, League, Filter & Search */}
+      <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 p-2.5 sm:p-3 rounded-2xl shadow-xs space-y-2">
+        {/* Controls Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center">
+          {/* Date Range Dropdown Filter (Defaulted to Today) */}
+          <div className="col-span-1 lg:col-span-3 relative min-w-0">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-emerald-500" />
+              <span>Date Range</span>
+            </label>
+            <div className="relative">
+              <select
+                id="date-filter-dropdown"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as any)}
+                className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+              >
+                {dateOptions.map((opt) => (
+                  <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+            </div>
+          </div>
+
+          {/* League Dropdown Filter */}
+          <div className="col-span-1 lg:col-span-2 relative min-w-0">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
+              League
+            </label>
+            <div className="relative">
+              <select
+                id="league-filter-dropdown"
+                value={selectedLeague}
+                onChange={(e) => onSelectLeague(e.target.value)}
+                className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+              >
+                {leagueOptions.map((opt) => (
+                  <option key={opt.code} value={opt.code} className="bg-white dark:bg-slate-900">
+                    {opt.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+            </div>
+          </div>
+
+          {/* Picks Strategy Filter Dropdown */}
+          <div className="col-span-1 lg:col-span-2 relative min-w-0">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
+              Filter Picks
+            </label>
+            <div className="relative">
+              <select
+                id="picks-filter-dropdown"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as any)}
+                className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+              >
+                {filterOptions.map((opt) => (
+                  <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+            </div>
+          </div>
+
+          {/* Market Choice Dropdown */}
+          {viewMode === 'WIREFRAME' && (
+            <div className="col-span-1 lg:col-span-2 relative min-w-0">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
+                Choices Column
+              </label>
+              <div className="relative">
+                <select
+                  id="market-column-dropdown"
+                  value={marketChoiceFilter}
+                  onChange={(e) => setMarketChoiceFilter(e.target.value as any)}
+                  className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+                >
+                  {marketOptions.map((opt) => (
+                    <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+              </div>
+            </div>
+          )}
+
+          {/* Search & View Toggle Column */}
+          <div className={`${viewMode === 'WIREFRAME' ? 'col-span-2 sm:col-span-2 lg:col-span-3' : 'col-span-2 sm:col-span-2 lg:col-span-5'} flex flex-col justify-end min-w-0`}>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
+              Search &amp; View
+            </label>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Find team..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-2 py-1.5 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none min-w-0 truncate font-medium"
+                />
+              </div>
+
+              {/* View Switcher Button */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('WIREFRAME')}
+                  className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                    viewMode === 'WIREFRAME'
+                      ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="Simplified Table View"
+                >
+                  <LayoutList className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('CARDS')}
+                  className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                    viewMode === 'CARDS'
+                      ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="Card View"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Search input */}
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search teams..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
+        {/* Seamless Merged Custom Date Range Inputs (Only shown when Custom is selected) */}
+        {dateFilter === 'CUSTOM' && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs">
+            <span className="text-[11px] font-bold text-slate-500">Custom Range:</span>
+            <div className="flex items-center gap-1">
+              <span className="text-slate-400 text-[10px]">From</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-mono font-semibold text-slate-900 dark:text-white"
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-slate-400 text-[10px]">To</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-mono font-semibold text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Filter Chips (+EV, Banker, High xG) */}
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <button
-          onClick={() => setFilterType('ALL')}
-          className={`px-3 py-1 rounded-lg border font-medium transition-all ${
-            filterType === 'ALL'
-              ? 'bg-slate-800 border-slate-700 text-white'
-              : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          All Matches ({fixtures.length})
-        </button>
-
-        <button
-          onClick={() => setFilterType('POSITIVE_EV')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border font-medium transition-all ${
-            filterType === 'POSITIVE_EV'
-              ? 'bg-emerald-950 border-emerald-500 text-emerald-300'
-              : 'bg-slate-950/50 border-slate-800 text-emerald-400 hover:border-emerald-800'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>+EV Value Picks</span>
-          <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-900/60 text-[10px] font-mono font-bold">
-            {totalEVCount}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setFilterType('BANKER')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border font-medium transition-all ${
-            filterType === 'BANKER'
-              ? 'bg-violet-950 border-violet-500 text-violet-300'
-              : 'bg-slate-950/50 border-slate-800 text-violet-400 hover:border-violet-800'
-          }`}
-        >
-          <Shield className="w-3.5 h-3.5" />
-          <span>Safe Bankers (&gt;70%)</span>
-          <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-violet-900/60 text-[10px] font-mono font-bold">
-            {totalBankerCount}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setFilterType('HIGH_XG')}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border font-medium transition-all ${
-            filterType === 'HIGH_XG'
-              ? 'bg-amber-950 border-amber-500 text-amber-300'
-              : 'bg-slate-950/50 border-slate-800 text-amber-400 hover:border-amber-800'
-          }`}
-        >
-          <Flame className="w-3.5 h-3.5" />
-          <span>High Expected Goals (&gt;2.8 xG)</span>
-        </button>
-      </div>
-
-      {/* Fixtures Grid */}
+      {/* Main Fixtures View */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-5 h-44 animate-pulse"
-            />
-          ))}
+        <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl p-8 space-y-4 animate-pulse">
+          <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded-xl w-full" />
+          <div className="h-12 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-full" />
+          <div className="h-12 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-full" />
         </div>
       ) : filteredFixtures.length === 0 ? (
-        <div className="p-12 text-center bg-slate-900/40 border border-slate-800/80 rounded-2xl">
-          <Layers className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-          <p className="text-sm text-slate-300 font-medium">No fixtures found matching current filter</p>
-          <p className="text-xs text-slate-500 mt-1">Try selecting &quot;All Leagues&quot; or clearing your search term</p>
+        <div className="p-8 text-center bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl">
+          <Layers className="w-7 h-7 text-slate-400 mx-auto mb-2" />
+          <p className="text-sm text-slate-800 dark:text-slate-200 font-bold">No matches found for selected date &amp; filters</p>
+          <p className="text-xs text-slate-500 mt-1">
+            Try switching Date Range to &quot;Next 3 Days&quot; or &quot;All Dates&quot;
+          </p>
         </div>
+      ) : viewMode === 'WIREFRAME' ? (
+        <SimplifiedPredictionsWireframe
+          fixtures={filteredFixtures}
+          onSelectDetail={onSelectDetail}
+          onAddLegToSlip={onAddLegToSlip}
+          isLegInSlip={isLegInSlip}
+          marketFilter={marketChoiceFilter}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredFixtures.map((fixture) => (
@@ -189,3 +323,4 @@ export const FixturesList: React.FC<FixturesListProps> = ({
     </div>
   );
 };
+
