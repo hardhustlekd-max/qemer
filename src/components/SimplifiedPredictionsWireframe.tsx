@@ -3,7 +3,6 @@ import { Fixture, MarketOption } from '../core/types.js';
 import {
   Sparkles,
   Shield,
-  Info,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -106,13 +105,13 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
   };
 
   return (
-    <div className="w-full max-w-full bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl shadow-lg overflow-hidden text-slate-900 dark:text-slate-100 font-sans transition-all">
+    <div className="w-full max-w-full bg-white dark:bg-[#0B0F17] rounded-3xl shadow-sm overflow-hidden text-slate-900 dark:text-slate-100 font-sans transition-all">
       {/* Prediction Table Header */}
-      <div className="grid grid-cols-12 items-center px-1.5 sm:px-3 py-2 bg-slate-100 dark:bg-slate-900 border-b border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white select-none gap-0.5 sm:gap-1">
-        <div className="col-span-3 sm:col-span-2 text-left font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 pl-0.5">
+      <div className="grid grid-cols-12 items-center px-2.5 sm:px-4 py-3 bg-slate-50/90 dark:bg-slate-900/80 text-slate-900 dark:text-white select-none gap-0.5 sm:gap-1">
+        <div className="col-span-2 sm:col-span-2 text-left font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 pl-0.5">
           Time
         </div>
-        <div className="col-span-4 sm:col-span-5 text-center font-extrabold text-xs sm:text-sm tracking-tight">
+        <div className="col-span-5 sm:col-span-5 text-center font-extrabold text-xs sm:text-sm tracking-tight">
           Match
         </div>
         <div className="col-span-3 sm:col-span-3 text-center font-extrabold text-xs sm:text-sm tracking-tight">
@@ -124,7 +123,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
       </div>
 
       {/* Match Predictions Rows */}
-      <div className="divide-y divide-slate-200 dark:divide-slate-800/80 bg-white dark:bg-[#0B0F17]">
+      <div className="divide-y divide-slate-100 dark:divide-slate-800/40 bg-white dark:bg-[#0B0F17]">
         {paginatedFixtures.map((fixture) => {
           const market = getSelectedMarket(fixture);
           const choiceText = formatWireframeChoice(market);
@@ -147,11 +146,11 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
             <div
               key={fixture.id}
               onClick={() => onSelectDetail(fixture)}
-              className="grid grid-cols-12 items-center px-1.5 sm:px-3 py-2 sm:py-2.5 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors group relative gap-0.5 sm:gap-1 min-w-0 cursor-pointer"
+              className="grid grid-cols-12 items-center px-2.5 sm:px-4 py-2.5 sm:py-3 hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-all group relative gap-0.5 sm:gap-1 min-w-0 cursor-pointer"
             >
               {/* Column 1: Time badge & Date */}
-              <div className="col-span-3 sm:col-span-2 flex flex-col items-start select-none min-w-0 pl-0.5">
-                <div className="px-1.5 py-0.5 rounded bg-slate-900 dark:bg-slate-800 text-white font-mono font-bold text-[11px] sm:text-xs tracking-tight shadow-xs whitespace-nowrap">
+              <div className="col-span-2 sm:col-span-2 flex flex-col items-start select-none min-w-0 pl-0.5">
+                <div className="px-2 py-0.5 rounded-lg bg-slate-900 dark:bg-slate-800 text-white font-mono font-bold text-[11px] sm:text-xs tracking-tight shadow-xs whitespace-nowrap">
                   {kickOff}
                 </div>
                 <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-mono tracking-tight font-medium mt-0.5 truncate max-w-full">
@@ -160,11 +159,11 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
               </div>
 
               {/* Column 2: Match (Home & Away with Win Probabilities) */}
-              <div className="col-span-4 sm:col-span-5 flex flex-col items-center justify-center text-center px-0.5 min-w-0 overflow-hidden">
+              <div className="col-span-5 sm:col-span-5 flex flex-col items-center justify-center text-center px-0.5 min-w-0 overflow-hidden">
                 <div className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white tracking-tight leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate w-full flex items-center justify-center gap-1.5" title={`${fixture.homeTeam}${homeWinPct !== undefined ? ` (${homeWinPct}% win prob)` : ''}`}>
                   <span className="truncate">{fixture.homeTeam}</span>
                   {homeWinPct !== undefined && (
-                    <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0" title={`${fixture.homeTeam} Win Probability: ${homeWinPct}%`}>
+                    <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 shadow-2xs shrink-0" title={`${fixture.homeTeam} Win Probability: ${homeWinPct}%`}>
                       {homeWinPct}%
                     </span>
                   )}
@@ -172,7 +171,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
                 <div className="font-semibold text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 tracking-tight leading-tight mt-0.5 truncate w-full flex items-center justify-center gap-1.5" title={`${fixture.awayTeam}${awayWinPct !== undefined ? ` (${awayWinPct}% win prob)` : ''}`}>
                   <span className="truncate">{fixture.awayTeam}</span>
                   {awayWinPct !== undefined && (
-                    <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.2 rounded-md bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800 shrink-0" title={`${fixture.awayTeam} Win Probability: ${awayWinPct}%`}>
+                    <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.2 rounded-md bg-cyan-50 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 shadow-2xs shrink-0" title={`${fixture.awayTeam} Win Probability: ${awayWinPct}%`}>
                       {awayWinPct}%
                     </span>
                   )}
@@ -181,7 +180,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
 
               {/* Column 3: Model Prediction & Confidence */}
               <div className="col-span-3 sm:col-span-3 flex flex-col items-center justify-center min-w-0 px-0.5 text-center">
-                <div className="inline-flex items-center gap-1 font-bold text-xs text-slate-900 dark:text-white px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 shadow-xs max-w-full truncate">
+                <div className="inline-flex items-center gap-1 font-bold text-xs text-slate-900 dark:text-white px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-900 shadow-2xs max-w-full truncate">
                   <span className="truncate">{choiceText}</span>
                 </div>
                 <div className="flex items-center gap-1 mt-0.5 text-[10px] text-slate-500 font-mono">
@@ -211,14 +210,14 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
 
       {/* Table Pagination Bar */}
       {fixtures.length > 0 && (
-        <div className="px-2 sm:px-3 py-2 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="px-3 sm:px-4 py-3 bg-slate-50/80 dark:bg-slate-900/70 flex flex-wrap items-center justify-between gap-2 text-xs">
           {/* Left: Summary Counter & Page Size Selector */}
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <span className="text-slate-600 dark:text-slate-400 font-semibold text-xs whitespace-nowrap">
               Showing <span className="font-bold text-slate-900 dark:text-white">{startItemIndex}–{endItemIndex}</span> of <span className="font-bold text-slate-900 dark:text-white">{fixtures.length}</span> matches
             </span>
 
-            {/* Page Size Dropdown Selector with matching rounded-xl px-2.5 py-1.5 */}
+            {/* Page Size Dropdown Selector */}
             <div className="relative inline-flex items-center">
               <select
                 id="table-page-size-dropdown"
@@ -227,7 +226,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none"
+                className="bg-white dark:bg-slate-900 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none shadow-xs"
               >
                 <option value={5} className="bg-white dark:bg-slate-900">5 per page</option>
                 <option value={10} className="bg-white dark:bg-slate-900">10 per page</option>
@@ -245,7 +244,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
               type="button"
               disabled={safeCurrentPage <= 1}
               onClick={() => setCurrentPage(1)}
-              className="p-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="p-1.5 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
               title="First Page"
             >
               <ChevronsLeft className="w-3.5 h-3.5" />
@@ -256,7 +255,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
               type="button"
               disabled={safeCurrentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs font-bold cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs font-bold cursor-pointer shadow-xs"
               title="Previous Page"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
@@ -288,10 +287,10 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
                       key={`page-${item}`}
                       type="button"
                       onClick={() => setCurrentPage(item)}
-                      className={`min-w-7 h-7 flex items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`min-w-7 h-7 flex items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
                         item === safeCurrentPage
-                          ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700'
+                          ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-sm'
+                          : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
                       {item}
@@ -305,7 +304,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
               type="button"
               disabled={safeCurrentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs font-bold cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-xs font-bold cursor-pointer shadow-xs"
               title="Next Page"
             >
               <span className="hidden sm:inline">Next</span>
@@ -317,7 +316,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
               type="button"
               disabled={safeCurrentPage >= totalPages}
               onClick={() => setCurrentPage(totalPages)}
-              className="p-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="p-1.5 rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
               title="Last Page"
             >
               <ChevronsRight className="w-3.5 h-3.5" />

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, Layers, LayoutList, LayoutGrid, Calendar, Sparkles } from 'lucide-react';
-import { Fixture, MarketOption } from '../core/types.js';
+import { Search, ChevronDown, Calendar, Sparkles, LayoutList, LayoutGrid } from 'lucide-react';
+import { Fixture } from '../core/types.js';
 import { getRelativeDateStr } from '../core/seedData.js';
 import { FixtureCard } from './FixtureCard.js';
 import { SimplifiedPredictionsWireframe } from './SimplifiedPredictionsWireframe.js';
@@ -114,7 +114,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   return (
     <div className="space-y-3 font-sans">
       {/* Merged Mobile-Friendly Toolbar with Date Range, League, Filter & Search */}
-      <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 p-2.5 sm:p-3 rounded-2xl shadow-xs space-y-2">
+      <div className="bg-white dark:bg-[#0B0F17] p-3.5 rounded-3xl shadow-sm space-y-2">
         {/* Controls Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center">
           {/* Date Range & Prebuilt Acca Button */}
@@ -132,7 +132,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                   id="date-filter-dropdown"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value as any)}
-                  className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+                  className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
                 >
                   {dateOptions.map((opt) => (
                     <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
@@ -148,7 +148,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                 <button
                   type="button"
                   onClick={onViewPrebuiltAccas}
-                  className="w-full bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 rounded-xl px-2.5 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1 transition-all cursor-pointer truncate shadow-2xs"
+                  className="w-full bg-emerald-50/90 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 rounded-xl px-2.5 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1 transition-all cursor-pointer truncate shadow-xs hover:shadow-sm"
                   title="View AI Prebuilt Accumulators"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -168,7 +168,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                 id="league-filter-dropdown"
                 value={selectedLeague}
                 onChange={(e) => onSelectLeague(e.target.value)}
-                className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+                className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
               >
                 {leagueOptions.map((opt) => (
                   <option key={opt.code} value={opt.code} className="bg-white dark:bg-slate-900">
@@ -190,7 +190,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                 id="picks-filter-dropdown"
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value as any)}
-                className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+                className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
               >
                 {filterOptions.map((opt) => (
                   <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
@@ -213,7 +213,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                   id="market-column-dropdown"
                   value={marketChoiceFilter}
                   onChange={(e) => setMarketChoiceFilter(e.target.value as any)}
-                  className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+                  className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
                 >
                   {marketOptions.map((opt) => (
                     <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
@@ -239,81 +239,84 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                   placeholder="Find team..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-2 py-1.5 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none min-w-0 truncate font-medium"
+                  className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl pl-8 pr-2 py-1.5 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none min-w-0 truncate font-medium shadow-xs"
                 />
               </div>
 
               {/* View Switcher Button */}
-              <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5 shrink-0">
+              <div className="flex items-center bg-slate-100/90 dark:bg-slate-900/90 rounded-xl p-0.5 shrink-0 shadow-inner">
                 <button
                   type="button"
                   onClick={() => setViewMode('WIREFRAME')}
-                  className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                  className={`p-1 rounded-lg transition-all cursor-pointer ${
                     viewMode === 'WIREFRAME'
-                      ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                   }`}
-                  title="Simplified Table View"
+                  title="Table Prediction View"
                 >
-                  <LayoutList className="w-4 h-4" />
+                  <LayoutList className="w-3.5 h-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('CARDS')}
-                  className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                  className={`p-1 rounded-lg transition-all cursor-pointer ${
                     viewMode === 'CARDS'
-                      ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                   }`}
                   title="Card View"
                 >
-                  <LayoutGrid className="w-4 h-4" />
+                  <LayoutGrid className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Seamless Merged Custom Date Range Inputs (Only shown when Custom is selected) */}
+        {/* Custom Date Range Sub-Bar */}
         {dateFilter === 'CUSTOM' && (
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs">
-            <span className="text-[11px] font-bold text-slate-500">Custom Range:</span>
-            <div className="flex items-center gap-1">
-              <span className="text-slate-400 text-[10px]">From</span>
-              <input
-                type="date"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none"
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-slate-400 text-[10px]">To</span>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                className="bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none"
-              />
-            </div>
+          <div className="pt-2 flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold">From:</span>
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="bg-slate-100 dark:bg-slate-900 rounded-lg px-2 py-1 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none shadow-xs"
+            />
+            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold">To:</span>
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="bg-slate-100 dark:bg-slate-900 rounded-lg px-2 py-1 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none shadow-xs"
+            />
           </div>
         )}
       </div>
 
-      {/* Main Fixtures View */}
+      {/* Fixtures Display (Wireframe or Cards) */}
       {isLoading ? (
-        <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl p-8 space-y-4 animate-pulse">
-          <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded-xl w-full" />
-          <div className="h-12 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-full" />
-          <div className="h-12 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-full" />
+        <div className="bg-white dark:bg-[#0B0F17] rounded-3xl p-10 text-center shadow-sm space-y-3">
+          <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mx-auto" />
+          <p className="text-xs text-slate-500 font-medium">Computing Poisson Match Predictions...</p>
         </div>
       ) : filteredFixtures.length === 0 ? (
-        <div className="p-8 text-center bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl">
-          <Layers className="w-7 h-7 text-slate-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-800 dark:text-slate-200 font-bold">No matches found for selected date &amp; filters</p>
-          <p className="text-xs text-slate-500 mt-1">
-            Try switching Date Range to &quot;Next 3 Days&quot; or &quot;All Dates&quot;
+        <div className="bg-white dark:bg-[#0B0F17] rounded-3xl p-8 text-center shadow-sm space-y-2">
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+            No fixtures found matching your criteria.
           </p>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            Try choosing &quot;All Dates&quot; or resetting your search filters.
+          </p>
+          {dateFilter !== 'ALL' && (
+            <button
+              onClick={() => setDateFilter('ALL')}
+              className="mt-2 px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-xs"
+            >
+              Show All Available Dates ({fixtures.length} matches)
+            </button>
+          )}
         </div>
       ) : viewMode === 'WIREFRAME' ? (
         <SimplifiedPredictionsWireframe
@@ -322,7 +325,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
           marketFilter={marketChoiceFilter}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {filteredFixtures.map((fixture) => (
             <FixtureCard
               key={fixture.id}
@@ -335,4 +338,3 @@ export const FixturesList: React.FC<FixturesListProps> = ({
     </div>
   );
 };
-

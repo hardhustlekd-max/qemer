@@ -24,11 +24,11 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectAccaCategory,
 }) => {
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8 py-2.5 transition-colors shadow-xs">
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md px-4 lg:px-8 py-2.5 transition-colors shadow-sm shadow-slate-900/5 dark:shadow-black/40">
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
         {/* Brand & Status */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-slate-900 dark:bg-slate-800 text-white flex items-center justify-center font-black text-xs sm:text-sm shadow-md shrink-0 border border-slate-700">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-slate-900 dark:bg-slate-800 text-white flex items-center justify-center font-black text-xs sm:text-sm shadow-md shadow-slate-900/10 shrink-0">
             <span className="font-mono text-emerald-400 font-extrabold">Q</span>
           </div>
           <div className="min-w-0">
@@ -44,13 +44,13 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Center Tab Navigation (Matches / Prebuilt Accas / Trends & Tips) */}
-        <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5 shadow-inner">
+        <div className="flex items-center bg-slate-100/90 dark:bg-slate-900/90 rounded-2xl p-1 shadow-inner">
           <button
             id="tab-fixtures-btn"
             onClick={() => onSelectTab('FIXTURES')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'FIXTURES'
-                ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-xs'
+                ? 'bg-white dark:bg-emerald-600 text-slate-900 dark:text-white shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -59,9 +59,9 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="tab-accas-btn"
             onClick={() => onSelectTab('ACCAS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
               activeTab === 'ACCAS'
-                ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-xs'
+                ? 'bg-white dark:bg-emerald-600 text-slate-900 dark:text-white shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -71,9 +71,9 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="tab-tips-btn"
             onClick={() => onSelectTab('TIPS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
               activeTab === 'TIPS'
-                ? 'bg-emerald-600 text-white shadow-xs'
+                ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
@@ -91,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
               onSelectTab('ACCAS');
               if (onSelectAccaCategory) onSelectAccaCategory('BANKER');
             }}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 transition-all cursor-pointer"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all cursor-pointer shadow-sm hover:shadow-md"
             title="View Safe Banker Prebuilt Accumulator"
           >
             <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -104,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
               onSelectTab('ACCAS');
               if (onSelectAccaCategory) onSelectAccaCategory('VALUE_HUNTER');
             }}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 transition-all cursor-pointer"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition-all cursor-pointer shadow-sm hover:shadow-md"
             title="View Value Hunter Prebuilt Accumulator"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -115,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="open-settings-modal-btn"
             onClick={onOpenSettings}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all cursor-pointer shadow-sm hover:shadow-md"
             title="Menu & Settings"
           >
             <Menu className="w-4 h-4" />

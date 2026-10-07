@@ -8,14 +8,13 @@ import {
   TrendingUp,
   Newspaper,
   Activity,
-  Calendar,
   Layers,
   FileText,
   Search,
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
-import { TrendingTipsData, FootballTipItem, GroundingSource } from '../core/types.js';
+import { TrendingTipsData, FootballTipItem } from '../core/types.js';
 
 interface TipsSectionProps {
   tipsData: TrendingTipsData | null;
@@ -64,28 +63,28 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
     switch (category) {
       case 'HEADLINE':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 shadow-2xs">
             <Newspaper className="w-3 h-3" />
             Headline
           </span>
         );
       case 'MATCH_PREVIEW':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 shadow-2xs">
             <Activity className="w-3 h-3" />
             Match Preview
           </span>
         );
       case 'BETTING_TIP':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-2xs">
             <TrendingUp className="w-3 h-3" />
             Betting Tip
           </span>
         );
       case 'INJURY_TEAM_NEWS':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 shadow-2xs">
             <AlertCircle className="w-3 h-3" />
             Team News
           </span>
@@ -96,15 +95,15 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
   return (
     <div className="space-y-4 font-sans animate-in fade-in duration-200">
       {/* Top Banner Card with Search Grounding Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-4 sm:p-5 border border-slate-700 shadow-md">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-4 sm:p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-black uppercase tracking-wider">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-wider shadow-xs">
                 <Flame className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Today&apos;s Trending Tips &amp; Headlines</span>
               </div>
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-mono">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 text-[10px] font-mono shadow-xs">
                 <Search className="w-3 h-3 text-sky-400" />
                 <span>Google Search Grounded</span>
               </div>
@@ -116,7 +115,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
               {tipsData?.headlineSummary || "Real-time football news, tactical breakdowns, team news, and market value predictions powered by Google Search grounding."}
             </p>
             {tipsData?.quotaNotice && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-medium mt-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 text-[11px] font-medium mt-1 shadow-xs">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
                 <span>{tipsData.quotaNotice}</span>
               </div>
@@ -133,7 +132,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
             <button
               onClick={onRefresh}
               disabled={isRefreshing || isLoading}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs hover:shadow-sm transition-all disabled:opacity-50 cursor-pointer"
               title="Refresh analysis with Google Search Grounding"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -144,7 +143,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
 
         {/* Grounding Web Citations Strip */}
         {tipsData?.groundingSources && tipsData.groundingSources.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-slate-700/80 flex flex-wrap items-center gap-2 text-xs">
+          <div className="mt-4 pt-3 flex flex-wrap items-center gap-2 text-xs">
             <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3 text-emerald-400" />
               Verified Web Sources:
@@ -156,7 +155,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
                   href={src.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/90 hover:bg-slate-700 border border-slate-600/70 text-[11px] text-slate-200 hover:text-white transition-colors truncate max-w-[180px]"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-[11px] text-slate-200 hover:text-white transition-colors truncate max-w-[180px] shadow-2xs"
                   title={src.title}
                 >
                   <span className="truncate">{src.title}</span>
@@ -169,9 +168,9 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
       </div>
 
       {/* Filter Tabs & Search Toolbar */}
-      <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 p-2.5 sm:p-3 rounded-2xl shadow-xs space-y-2.5">
+      <div className="bg-white dark:bg-[#0B0F17] p-3 rounded-3xl shadow-sm space-y-2.5">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
-          {/* Categories Pill Switcher */}
+          {/* Categories Switcher */}
           <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
             <button
               onClick={() => setSelectedCategory('ALL')}
@@ -243,7 +242,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
               placeholder="Search analysis, teams, tips..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none truncate font-medium"
+              className="w-full bg-slate-100 dark:bg-slate-900 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none truncate font-medium shadow-xs"
             />
           </div>
         </div>
@@ -251,15 +250,15 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
 
       {/* Content Rendering */}
       {isLoading ? (
-        <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl p-8 space-y-4 animate-pulse">
+        <div className="bg-white dark:bg-[#0B0F17] rounded-3xl p-8 space-y-4 shadow-sm animate-pulse">
           <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-xl w-1/3" />
           <div className="h-20 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-full" />
           <div className="h-20 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-full" />
         </div>
       ) : selectedCategory === 'RAW_MARKDOWN' ? (
         /* Full Markdown View */
-        <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div className="bg-white dark:bg-[#0B0F17] rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-500" />
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -276,7 +275,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
           </div>
         </div>
       ) : filteredTips.length === 0 ? (
-        <div className="p-8 text-center bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl">
+        <div className="p-8 text-center bg-white dark:bg-[#0B0F17] rounded-3xl shadow-sm">
           <Layers className="w-7 h-7 text-slate-400 mx-auto mb-2" />
           <p className="text-sm text-slate-800 dark:text-slate-200 font-bold">No tips found for this category or filter</p>
           <p className="text-xs text-slate-500 mt-1">
@@ -289,7 +288,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
           {filteredTips.map((tip) => (
             <div
               key={tip.id}
-              className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 group"
+              className="bg-white dark:bg-[#0B0F17] rounded-3xl p-4.5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3 group"
             >
               <div className="space-y-2">
                 {/* Header with Category & League */}
@@ -297,13 +296,13 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
                   <div className="flex items-center gap-1.5">
                     {getCategoryBadge(tip.category)}
                     {tip.league && (
-                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 shadow-2xs">
                         {tip.league}
                       </span>
                     )}
                   </div>
                   {tip.confidenceOrOdds && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60 shrink-0">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 shadow-2xs shrink-0">
                       <Sparkles className="w-3 h-3 text-amber-500" />
                       {tip.confidenceOrOdds}
                     </span>
@@ -317,14 +316,14 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
 
                 {/* Match Highlight Tag */}
                 {tip.match && (
-                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
+                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/80 px-2.5 py-1.5 rounded-xl flex items-center justify-between shadow-2xs">
                     <span className="truncate">⚽ {tip.match}</span>
                   </div>
                 )}
 
                 {/* Prediction / Value Tip Highlight */}
                 {tip.predictionOrTip && (
-                  <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-xs">
+                  <div className="p-2.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 text-xs shadow-2xs">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                       <TrendingUp className="w-3 h-3" />
                       <span>Recommended Pick</span>
@@ -342,7 +341,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
               </div>
 
               {/* Footer with Source Link */}
-              <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+              <div className="pt-2.5 flex items-center justify-between text-xs">
                 {tip.sourceUrl ? (
                   <a
                     href={tip.sourceUrl}
@@ -366,7 +365,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
 
       {/* Sources Grid List Footer */}
       {tipsData?.groundingSources && tipsData.groundingSources.length > 0 && (
-        <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-2">
+        <div className="bg-white dark:bg-[#0B0F17] rounded-3xl p-4.5 shadow-sm space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
             <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>Google Search Grounding Citations &amp; Reference Articles</span>
@@ -381,7 +380,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
                 href={source.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 text-xs text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group"
+                className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group shadow-xs"
               >
                 <span className="truncate font-medium text-[11px]">{source.title}</span>
                 <ExternalLink className="w-3 h-3 shrink-0 text-slate-400 group-hover:text-emerald-500" />

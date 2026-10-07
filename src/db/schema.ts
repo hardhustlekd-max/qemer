@@ -80,6 +80,12 @@ export interface TablePaginationSchema {
   totalPages: number;
 }
 
+export interface AppThemeConfigSchema {
+  theme: 'light' | 'dark';
+  style_mode: 'borderless_shadow';
+  updated_at: string;
+}
+
 export interface ServerlessDeploymentConfigSchema {
   api_prefix: string;
   is_serverless: boolean;

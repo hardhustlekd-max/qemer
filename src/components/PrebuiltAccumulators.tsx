@@ -6,12 +6,8 @@ import {
   Flame,
   Copy,
   Check,
-  RefreshCw,
-  Gauge,
-  TrendingUp,
   Calendar,
   Layers,
-  ChevronRight,
   Info,
 } from 'lucide-react';
 import { Fixture, AccumulatorSlip, EngineSettings } from '../core/types.js';
@@ -31,7 +27,6 @@ interface RiskProfile {
   label: string;
   badgeBg: string;
   textColor: string;
-  borderColor: string;
   meterPercentage: number;
   description: string;
 }
@@ -46,7 +41,6 @@ function calculateRiskProfile(slip: AccumulatorSlip): RiskProfile {
       label: 'Low Risk',
       badgeBg: 'bg-emerald-100 dark:bg-emerald-950/60',
       textColor: 'text-emerald-700 dark:text-emerald-300',
-      borderColor: 'border-emerald-300 dark:border-emerald-800',
       meterPercentage: 20,
       description: 'High Poisson win probability across safe selections.',
     };
@@ -58,7 +52,6 @@ function calculateRiskProfile(slip: AccumulatorSlip): RiskProfile {
       label: 'Moderate Risk',
       badgeBg: 'bg-amber-100 dark:bg-amber-950/60',
       textColor: 'text-amber-700 dark:text-amber-300',
-      borderColor: 'border-amber-300 dark:border-amber-800',
       meterPercentage: 50,
       description: 'Balanced risk-to-reward ratio with solid market value.',
     };
@@ -70,7 +63,6 @@ function calculateRiskProfile(slip: AccumulatorSlip): RiskProfile {
       label: 'High Risk',
       badgeBg: 'bg-orange-100 dark:bg-orange-950/60',
       textColor: 'text-orange-700 dark:text-orange-300',
-      borderColor: 'border-orange-300 dark:border-orange-800',
       meterPercentage: 80,
       description: 'High multiplier with increased variance.',
     };
@@ -81,7 +73,6 @@ function calculateRiskProfile(slip: AccumulatorSlip): RiskProfile {
     label: 'Longshot Risk',
     badgeBg: 'bg-rose-100 dark:bg-rose-950/60',
     textColor: 'text-rose-700 dark:text-rose-300',
-    borderColor: 'border-rose-300 dark:border-rose-800',
     meterPercentage: 95,
     description: 'High potential return speculative accumulator.',
   };
@@ -95,7 +86,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<PrebuiltCategory>('BANKER');
   const [dateScope, setDateScope] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'ALL'>('TODAY');
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [stakeBenchmark, setStakeBenchmark] = useState<number>(10);
+  const [stakeBenchmark] = useState<number>(10);
 
   const fallbackSettings: EngineSettings = settings || {
     activeProvider: 'FOOTBALL_DATA_CO_UK',
@@ -151,7 +142,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
       },
       fallbackSettings
     );
-    goalsSlip.name = dateScope === 'TODAY' ? "🔥 Today's High Goals Combo" : '⚽ High Goals & BTTS Acca';
+    goalsSlip.name = dateScope === 'TODAY' ? "Today's High Goals Combo" : 'High Goals & BTTS Acca';
 
     // 4. Mega Combo Acca
     const megaSlip = AccumulatorGenerator.generateSlip(
@@ -166,7 +157,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
       },
       fallbackSettings
     );
-    megaSlip.name = dateScope === 'TODAY' ? "✨ Today's 6-Fold Mega Acca" : '🏆 Weekend Mega Accumulator';
+    megaSlip.name = dateScope === 'TODAY' ? "Today's 6-Fold Mega Acca" : 'Weekend Mega Accumulator';
 
     return {
       BANKER: bankerSlip,
@@ -193,7 +184,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
       subtitle: 'Safe Picks >68% Win Prob',
       icon: Shield,
       color: 'emerald',
-      activeClass: 'bg-emerald-600 text-white border-emerald-500 shadow-md',
+      activeClass: 'bg-emerald-600 text-white shadow-md',
     },
     {
       id: 'VALUE_HUNTER' as const,
@@ -201,7 +192,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
       subtitle: '+EV Market Edge Picks',
       icon: Sparkles,
       color: 'amber',
-      activeClass: 'bg-amber-600 text-white border-amber-500 shadow-md',
+      activeClass: 'bg-amber-600 text-white shadow-md',
     },
     {
       id: 'HIGH_GOALS' as const,
@@ -209,7 +200,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
       subtitle: 'Over 2.5 & BTTS Combos',
       icon: Zap,
       color: 'indigo',
-      activeClass: 'bg-indigo-600 text-white border-indigo-500 shadow-md',
+      activeClass: 'bg-indigo-600 text-white shadow-md',
     },
     {
       id: 'MEGA_COMBO' as const,
@@ -217,13 +208,13 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
       subtitle: '6-Fold High Multiplier',
       icon: Flame,
       color: 'rose',
-      activeClass: 'bg-rose-600 text-white border-rose-500 shadow-md',
+      activeClass: 'bg-rose-600 text-white shadow-md',
     },
   ];
 
   if (!fixtures || fixtures.length === 0) {
     return (
-      <div className="p-8 text-center bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl space-y-3">
+      <div className="p-8 text-center bg-white dark:bg-[#0B0F17] rounded-3xl shadow-sm space-y-3">
         <Layers className="w-8 h-8 text-slate-400 mx-auto" />
         <h3 className="text-sm font-bold text-slate-900 dark:text-white">
           Generating Prebuilt Accumulators...
@@ -241,11 +232,11 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
   return (
     <div className="space-y-4 font-sans animate-in fade-in duration-150">
       {/* Top Banner: Prebuilt Provider Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-4 sm:p-5 border border-slate-700 shadow-md">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-4 sm:p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider shadow-xs">
                 Automated Mathematical Provider
               </span>
               <span className="text-xs font-mono text-slate-400">
@@ -268,7 +259,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
                 id="prebuilt-date-scope-dropdown"
                 value={dateScope}
                 onChange={(e) => setDateScope(e.target.value as any)}
-                className="bg-slate-800 text-white border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold appearance-none cursor-pointer pr-7 focus:outline-none"
+                className="bg-slate-800/90 text-white rounded-xl px-2.5 py-1.5 text-xs font-bold appearance-none cursor-pointer pr-7 focus:outline-none shadow-xs"
               >
                 <option value="TODAY">Today&apos;s Accas</option>
                 <option value="TOMORROW">Tomorrow</option>
@@ -281,7 +272,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
       </div>
 
       {/* Strategy Category Switcher Tabs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isSelected = selectedCategory === cat.id;
@@ -292,10 +283,10 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
               key={cat.id}
               type="button"
               onClick={() => setSelectedCategory(cat.id)}
-              className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+              className={`p-3.5 rounded-2xl text-left transition-all cursor-pointer flex flex-col justify-between ${
                 isSelected
                   ? cat.activeClass
-                  : 'bg-white dark:bg-[#0B0F17] border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  : 'bg-white dark:bg-[#0B0F17] hover:bg-slate-50 dark:hover:bg-slate-900/60 text-slate-900 dark:text-white shadow-sm hover:shadow-md'
               }`}
             >
               <div className="flex items-center justify-between gap-1 mb-1">
@@ -321,15 +312,15 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
 
       {/* Selected Prebuilt Accumulator Details Card */}
       {activeSlip && (
-        <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 rounded-2xl overflow-hidden shadow-lg space-y-0">
+        <div className="bg-white dark:bg-[#0B0F17] rounded-3xl overflow-hidden shadow-sm space-y-0">
           {/* Slip Header & Metas */}
-          <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/60 dark:bg-slate-900/40">
+          <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/50">
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                   {activeSlip.name}
                 </h3>
-                <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold border border-slate-300 dark:border-slate-700">
+                <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold shadow-2xs">
                   {activeSlip.legs.length} Selections
                 </span>
               </div>
@@ -342,7 +333,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
             <button
               type="button"
               onClick={() => handleCopySlip(activeSlip, activeSlip.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs shrink-0 ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs hover:shadow-sm shrink-0 ${
                 copiedId === activeSlip.id
                   ? 'bg-emerald-600 text-white'
                   : 'bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white'
@@ -363,9 +354,9 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
           </div>
 
           {/* Key Metrics Dashboard Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-100/60 dark:bg-slate-900/70 border-b border-slate-200 dark:border-slate-800 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 p-4 bg-slate-100/60 dark:bg-slate-900/40 text-xs">
             {/* Total Multiplied Odds */}
-            <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <div className="p-3 rounded-2xl bg-white dark:bg-slate-950/80 shadow-xs">
               <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
                 Total Multiplied Odds
               </span>
@@ -375,7 +366,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
             </div>
 
             {/* Model Win Probability */}
-            <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <div className="p-3 rounded-2xl bg-white dark:bg-slate-950/80 shadow-xs">
               <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
                 Poisson Probability
               </span>
@@ -386,14 +377,14 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
 
             {/* Dynamic Risk Meter */}
             {risk && (
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <div className="p-3 rounded-2xl bg-white dark:bg-slate-950/80 shadow-xs">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5 flex items-center justify-between">
                   <span>Risk Profile</span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${risk.badgeBg} ${risk.textColor} border ${risk.borderColor}`}>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${risk.badgeBg} ${risk.textColor}`}>
                     {risk.label}
                   </span>
                 </span>
-                <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden mt-2">
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden mt-2">
                   <div
                     style={{ width: `${risk.meterPercentage}%` }}
                     className={`h-full ${
@@ -409,7 +400,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
             )}
 
             {/* Benchmark Payout */}
-            <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <div className="p-3 rounded-2xl bg-white dark:bg-slate-950/80 shadow-xs">
               <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
                 £{stakeBenchmark} Stake Payout
               </span>
@@ -420,24 +411,24 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
           </div>
 
           {/* Matches & Legs Breakdown List */}
-          <div className="divide-y divide-slate-200 dark:divide-slate-800">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/40">
             {activeSlip.legs.map((leg, index) => {
               const matchedFixture = fixtures.find((f) => f.id === leg.fixtureId);
 
               return (
                 <div
                   key={`${leg.fixtureId}-${leg.marketKey}`}
-                  className="p-3.5 sm:p-4 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
+                  className="p-3.5 sm:p-4 hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
                 >
                   {/* Leg Index & Teams */}
                   <div className="flex items-start gap-3 min-w-0">
-                    <span className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold font-mono text-xs flex items-center justify-center shrink-0">
+                    <span className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold font-mono text-xs flex items-center justify-center shrink-0 shadow-2xs">
                       {index + 1}
                     </span>
 
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold uppercase text-slate-400 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700">
+                        <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 shadow-2xs">
                           {leg.league}
                         </span>
                         {leg.fixtureDate && (
@@ -469,7 +460,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
                   {/* Prebuilt Market Selection & Odds */}
                   <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
                     <div className="text-right">
-                      <div className="inline-flex items-center gap-1 font-bold text-xs sm:text-sm text-slate-900 dark:text-white px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700">
+                      <div className="inline-flex items-center gap-1 font-bold text-xs sm:text-sm text-slate-900 dark:text-white px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-900 shadow-2xs">
                         <span>{leg.selection}</span>
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono mt-0.5">
@@ -477,7 +468,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
                       </div>
                     </div>
 
-                    <div className="font-mono font-black text-sm sm:text-base text-slate-900 dark:text-emerald-400 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <div className="font-mono font-black text-sm sm:text-base text-slate-900 dark:text-emerald-400 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 shadow-xs">
                       @{leg.odds.toFixed(2)}
                     </div>
                   </div>
@@ -487,7 +478,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
           </div>
 
           {/* Card Footer: Summary Action */}
-          <div className="p-3 sm:p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
+          <div className="p-3.5 sm:p-4 bg-slate-50/70 dark:bg-slate-950/70 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
             <span className="text-slate-500 dark:text-slate-400 text-xs">
               💡 {activeSlip.legs.length} legs selected by the Poisson mathematical model. Odds subject to bookmaker line adjustments.
             </span>
@@ -495,7 +486,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
             <button
               type="button"
               onClick={() => handleCopySlip(activeSlip, activeSlip.id)}
-              className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs shrink-0"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs hover:shadow-sm shrink-0"
             >
               <Copy className="w-3.5 h-3.5" />
               <span>Copy Accumulator Summary</span>
