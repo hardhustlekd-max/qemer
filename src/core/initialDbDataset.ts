@@ -208,6 +208,68 @@ export function getInitialUpcomingFixtures(): Fixture[] {
   const day3Str = getRelativeDateStr(3);
 
   return [
+    // Brasileirão Série A (BRA) - Scheduled for Today
+    {
+      id: 'fix_bra_1',
+      providerId: 'football_db',
+      league: 'BRA',
+      leagueName: 'Brasileirão Série A',
+      matchDate: todayStr,
+      kickOffTime: '19:00',
+      homeTeam: 'Internacional',
+      awayTeam: 'Corinthians',
+      status: 'SCHEDULED',
+      odds: { homeWin: 2.10, draw: 3.40, awayWin: 3.50, over25: 2.05, under25: 1.75, bttsYes: 1.85, bttsNo: 1.95 },
+    },
+    {
+      id: 'fix_bra_2',
+      providerId: 'football_db',
+      league: 'BRA',
+      leagueName: 'Brasileirão Série A',
+      matchDate: todayStr,
+      kickOffTime: '19:30',
+      homeTeam: 'Red Bull Bragantino',
+      awayTeam: 'Mirassol',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.85, draw: 3.50, awayWin: 4.20, over25: 1.90, under25: 1.90, bttsYes: 1.80, bttsNo: 2.00 },
+    },
+    {
+      id: 'fix_bra_3',
+      providerId: 'football_db',
+      league: 'BRA',
+      leagueName: 'Brasileirão Série A',
+      matchDate: todayStr,
+      kickOffTime: '20:00',
+      homeTeam: 'Botafogo',
+      awayTeam: 'Vasco da Gama',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.70, draw: 3.60, awayWin: 5.00, over25: 1.95, under25: 1.85, bttsYes: 1.90, bttsNo: 1.90 },
+    },
+    {
+      id: 'fix_bra_4',
+      providerId: 'football_db',
+      league: 'BRA',
+      leagueName: 'Brasileirão Série A',
+      matchDate: todayStr,
+      kickOffTime: '21:00',
+      homeTeam: 'Vitória',
+      awayTeam: 'Chapecoense',
+      status: 'SCHEDULED',
+      odds: { homeWin: 2.00, draw: 3.30, awayWin: 3.80, over25: 2.10, under25: 1.70, bttsYes: 1.95, bttsNo: 1.85 },
+    },
+    {
+      id: 'fix_bra_5',
+      providerId: 'football_db',
+      league: 'BRA',
+      leagueName: 'Brasileirão Série A',
+      matchDate: todayStr,
+      kickOffTime: '21:30',
+      homeTeam: 'Remo',
+      awayTeam: 'Grêmio',
+      status: 'SCHEDULED',
+      odds: { homeWin: 3.20, draw: 3.25, awayWin: 2.25, over25: 2.00, under25: 1.80, bttsYes: 1.85, bttsNo: 1.95 },
+    },
+
     // Premier League (E0)
     {
       id: 'fix_e0_1',

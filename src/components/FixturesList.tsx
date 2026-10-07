@@ -26,7 +26,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   const [dateFilter, setDateFilter] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM'>('TODAY');
   const [customStartDate, setCustomStartDate] = useState(getRelativeDateStr(0));
   const [customEndDate, setCustomEndDate] = useState(getRelativeDateStr(3));
-  const [filterType, setFilterType] = useState<'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG'>('BANKER');
+  const [filterType, setFilterType] = useState<'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG'>('ALL');
   const [viewMode, setViewMode] = useState<'WIREFRAME' | 'CARDS'>('WIREFRAME');
   const [marketChoiceFilter, setMarketChoiceFilter] = useState<'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS'>('BEST_VALUE');
 
@@ -76,7 +76,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
     const next3DaysStr = getRelativeDateStr(2);
     const thisWeekStr = getRelativeDateStr(6);
 
-    return fixtures.filter((f) => {
+    const matches = fixtures.filter((f) => {
       // Date filtering - defaulted to TODAY
       if (dateFilter === 'TODAY') {
         if (f.matchDate !== todayStr) return false;
@@ -108,15 +108,32 @@ export const FixturesList: React.FC<FixturesListProps> = ({
         const hasEV = f.markets?.some((m) => m.isPositiveEV);
         if (!hasEV) return false;
       } else if (filterType === 'BANKER') {
-        const hasBanker = f.markets?.some((m) => m.isBanker);
+        const hasBanker = f.markets?.some((m) => m.isBanker) ||
+          (f.prediction && Math.max(f.prediction.homeWinProb, f.prediction.awayWinProb) >= 0.45);
         if (!hasBanker) return false;
       } else if (filterType === 'HIGH_XG') {
-        if (f.prediction && f.prediction.homeXG + f.prediction.awayXG < 2.8) {
+        if (f.prediction && f.prediction.homeXG + f.prediction.awayXG < 2.5) {
           return false;
         }
       }
 
       return true;
+    });
+
+    // If TODAY was selected but 0 matches matched exact date string due to UTC offset, show available active matches
+    let finalFixtures = matches;
+    if (finalFixtures.length === 0 && dateFilter === 'TODAY' && fixtures.length > 0) {
+      const earliestDate = fixtures.map((f) => f.matchDate).sort()[0];
+      if (earliestDate) {
+        finalFixtures = fixtures.filter((f) => f.matchDate === earliestDate);
+      }
+    }
+
+    // Sort by highest probability / value by default so top picks are always prioritized
+    return finalFixtures.slice().sort((a, b) => {
+      const probA = Math.max(a.prediction?.homeWinProb || 0, a.prediction?.awayWinProb || 0);
+      const probB = Math.max(b.prediction?.homeWinProb || 0, b.prediction?.awayWinProb || 0);
+      return probB - probA;
     });
   }, [fixtures, dateFilter, customStartDate, customEndDate, selectedLeague, searchQuery, filterType]);
 
