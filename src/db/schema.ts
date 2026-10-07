@@ -80,6 +80,14 @@ export interface TablePaginationSchema {
   totalPages: number;
 }
 
+export interface SimplifiedTableLayoutSchema {
+  time_col_width: string;
+  match_col_width: string;
+  prediction_col_width: string;
+  odds_col_width: string;
+  is_simplified: boolean;
+}
+
 export interface AppThemeConfigSchema {
   theme: 'light' | 'dark';
   style_mode: 'borderless_shadow';
@@ -90,6 +98,9 @@ export interface ServerlessDeploymentConfigSchema {
   api_prefix: string;
   is_serverless: boolean;
   db_storage_mode: 'file' | 'in_memory' | 'temp_volume';
+  auto_seed_on_boot: boolean;
+  historical_records_count: number;
+  upcoming_fixtures_count: number;
   updated_at: string;
 }
 

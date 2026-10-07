@@ -13,6 +13,8 @@ import { FootballDataCSVParser } from '../core/csvParser.js';
 import { getRelativeDateStr } from '../core/seedData.js';
 import { LiveScore } from '../providers/types.js';
 import { fetchRealLiveScores } from './realLiveScoresService.js';
+import { fetchRealUpcomingFixtures } from './realUpcomingFixturesService.js';
+import { getInitialHistoricalMatches } from '../core/initialDbDataset.js';
 
 // Default In-Memory Engine State for Universal & Client-Side execution (Vercel, Static, etc.)
 let localSettings: EngineSettings = {
@@ -25,7 +27,7 @@ let localSettings: EngineSettings = {
   autoSyncDaily: true,
 };
 
-let localHistoricalMatches: HistoricalMatch[] = [];
+let localHistoricalMatches: HistoricalMatch[] = getInitialHistoricalMatches();
 let localUpcomingFixtures: Fixture[] = [];
 
 const PROVIDER_METADATA: ProviderStatus[] = [
@@ -106,6 +108,10 @@ export class EngineService {
 
     if (serverData && serverData.success && Array.isArray(serverData.fixtures) && serverData.fixtures.length > 0) {
       return serverData.fixtures;
+    }
+
+    if (localUpcomingFixtures.length === 0) {
+      localUpcomingFixtures = await fetchRealUpcomingFixtures();
     }
 
     // Client-side fallback calculation with pure Poisson mathematical engine
