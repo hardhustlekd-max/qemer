@@ -1,20 +1,16 @@
 import React from 'react';
-import { X, TrendingUp, ShieldCheck, Zap, BarChart2, PlusCircle, Check } from 'lucide-react';
-import { Fixture, AccaLeg, MarketOption } from '../core/types.js';
+import { X, TrendingUp, BarChart2, Zap } from 'lucide-react';
+import { Fixture } from '../core/types.js';
 import { PoissonMatrixView } from './PoissonMatrixView.js';
 
 interface MatchDetailModalProps {
   fixture: Fixture | null;
   onClose: () => void;
-  onAddLegToSlip: (leg: AccaLeg) => void;
-  isLegInSlip: (fixtureId: string, marketKey: MarketOption['key']) => boolean;
 }
 
 export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
   fixture,
   onClose,
-  onAddLegToSlip,
-  isLegInSlip,
 }) => {
   if (!fixture || !fixture.prediction) return null;
 
@@ -203,68 +199,40 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
               Available Betting Markets &amp; Expected Value (+EV)
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {(fixture.markets || []).map((m) => {
-                const inSlip = isLegInSlip(fixture.id, m.key);
-                return (
-                  <div
-                    key={m.key}
-                    className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
-                      m.isPositiveEV
-                        ? 'bg-emerald-950/20 border-emerald-800/60 hover:border-emerald-500'
-                        : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-xs text-white">{m.name}</span>
-                        {m.isPositiveEV && (
-                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-900/60 px-1.5 py-0.2 rounded border border-emerald-700/50">
-                            +{(m.expectedValue * 100).toFixed(1)}% EV
-                          </span>
-                        )}
-                        {m.isBanker && (
-                          <span className="text-[10px] font-bold text-violet-400 bg-violet-900/60 px-1.5 py-0.2 rounded border border-violet-700/50">
-                            Banker
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        Odds: <span className="text-white font-mono font-bold">{m.odds.toFixed(2)}</span> | AI Prob:{' '}
-                        <span className="text-slate-300 font-mono">{(m.probability * 100).toFixed(1)}%</span>
-                      </div>
+              {(fixture.markets || []).map((m) => (
+                <div
+                  key={m.key}
+                  className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                    m.isPositiveEV
+                      ? 'bg-emerald-950/20 border-emerald-800/60'
+                      : 'bg-slate-900/60 border-slate-800'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-xs text-white">{m.name}</span>
+                      {m.isPositiveEV && (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-900/60 px-1.5 py-0.2 rounded border border-emerald-700/50">
+                          +{(m.expectedValue * 100).toFixed(1)}% EV
+                        </span>
+                      )}
+                      {m.isBanker && (
+                        <span className="text-[10px] font-bold text-violet-400 bg-violet-900/60 px-1.5 py-0.2 rounded border border-violet-700/50">
+                          Banker
+                        </span>
+                      )}
                     </div>
-
-                    <button
-                      onClick={() =>
-                        onAddLegToSlip({
-                          fixtureId: fixture.id,
-                          fixtureDate: fixture.matchDate,
-                          league: fixture.leagueName,
-                          homeTeam: fixture.homeTeam,
-                          awayTeam: fixture.awayTeam,
-                          marketKey: m.key,
-                          marketName: m.name,
-                          selection: m.name,
-                          odds: m.odds,
-                          probability: m.probability,
-                          expectedValue: m.expectedValue,
-                          reasoning: `AI Model: ${(m.probability * 100).toFixed(1)}% prob @ ${m.odds.toFixed(2)} odds`,
-                          isBanker: m.isBanker,
-                          isPositiveEV: m.isPositiveEV,
-                        })
-                      }
-                      className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
-                        inSlip
-                          ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
-                          : 'bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white'
-                      }`}
-                    >
-                      {inSlip ? <Check className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
-                      <span className="hidden sm:inline">{inSlip ? 'Added' : 'Add'}</span>
-                    </button>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      Odds: <span className="text-white font-mono font-bold">{m.odds.toFixed(2)}</span> | AI Prob:{' '}
+                      <span className="text-slate-300 font-mono">{(m.probability * 100).toFixed(1)}%</span>
+                    </div>
                   </div>
-                );
-              })}
+
+                  <span className="font-mono font-bold text-xs text-emerald-400 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                    @{m.odds.toFixed(2)}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

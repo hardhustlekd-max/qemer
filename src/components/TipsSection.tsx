@@ -15,14 +15,13 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
-import { TrendingTipsData, FootballTipItem, GroundingSource, AccaLeg } from '../core/types.js';
+import { TrendingTipsData, FootballTipItem, GroundingSource } from '../core/types.js';
 
 interface TipsSectionProps {
   tipsData: TrendingTipsData | null;
   isLoading: boolean;
   isRefreshing: boolean;
   onRefresh: () => void;
-  onAddLegToSlip?: (leg: AccaLeg) => void;
 }
 
 export const TipsSection: React.FC<TipsSectionProps> = ({
@@ -328,7 +327,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
                   <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-xs">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                       <TrendingUp className="w-3 h-3" />
-                      <span>Recommended Pick / Angle</span>
+                      <span>Recommended Pick</span>
                     </div>
                     <div className="font-extrabold text-slate-900 dark:text-emerald-200 mt-0.5">
                       {tip.predictionOrTip}

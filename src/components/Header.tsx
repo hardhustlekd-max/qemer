@@ -1,16 +1,16 @@
 import React from 'react';
-import { Shield, Sparkles, Menu } from 'lucide-react';
+import { Shield, Sparkles, Menu, Zap } from 'lucide-react';
 import { EngineSettings, ProviderStatus } from '../core/types.js';
 
 interface HeaderProps {
   settings: EngineSettings | null;
   providers: ProviderStatus[];
   stats: { totalMatches: number; totalTeams: number; leagues: any[] };
-  activeTab: 'FIXTURES' | 'TIPS';
-  onSelectTab: (tab: 'FIXTURES' | 'TIPS') => void;
+  activeTab: 'FIXTURES' | 'ACCAS' | 'TIPS';
+  onSelectTab: (tab: 'FIXTURES' | 'ACCAS' | 'TIPS') => void;
   onOpenSettings: () => void;
   onOpenSeedModal: () => void;
-  onQuickGenerate: (strategy: 'BANKER' | 'VALUE_HUNTER') => void;
+  onSelectAccaCategory?: (cat: 'BANKER' | 'VALUE_HUNTER') => void;
   onProviderChange: (providerId: EngineSettings['activeProvider']) => void;
   isSyncing: boolean;
   theme: 'light' | 'dark';
@@ -21,7 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
   onOpenSettings,
-  onQuickGenerate,
+  onSelectAccaCategory,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8 py-2.5 transition-colors shadow-xs">
@@ -38,12 +38,12 @@ export const Header: React.FC<HeaderProps> = ({
               </h1>
             </div>
             <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
-              Match Predictions &amp; Accumulator Slip
+              Pure Match Predictions &amp; Prebuilt Accumulator Provider
             </p>
           </div>
         </div>
 
-        {/* Center Tab Navigation (Matches / Tips) */}
+        {/* Center Tab Navigation (Matches / Prebuilt Accas / Trends & Tips) */}
         <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5 shadow-inner">
           <button
             id="tab-fixtures-btn"
@@ -54,7 +54,19 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            ⚽ Matches
+            ⚽ Predictions
+          </button>
+          <button
+            id="tab-accas-btn"
+            onClick={() => onSelectTab('ACCAS')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              activeTab === 'ACCAS'
+                ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span>Prebuilt Accas</span>
           </button>
           <button
             id="tab-tips-btn"
@@ -65,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span>🔥 Tips</span>
+            <span>🔥 Trends</span>
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
           </button>
         </div>
@@ -76,27 +88,27 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="quick-banker-btn"
             onClick={() => {
-              onSelectTab('FIXTURES');
-              onQuickGenerate('BANKER');
+              onSelectTab('ACCAS');
+              if (onSelectAccaCategory) onSelectAccaCategory('BANKER');
             }}
             className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 transition-all cursor-pointer"
-            title="Generate Safe Accumulator"
+            title="View Safe Banker Prebuilt Accumulator"
           >
             <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Safe Picks</span>
+            <span>Safe Acca</span>
           </button>
 
           <button
             id="quick-valhunter-btn"
             onClick={() => {
-              onSelectTab('FIXTURES');
-              onQuickGenerate('VALUE_HUNTER');
+              onSelectTab('ACCAS');
+              if (onSelectAccaCategory) onSelectAccaCategory('VALUE_HUNTER');
             }}
             className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 transition-all cursor-pointer"
-            title="Generate Value Accumulator"
+            title="View Value Hunter Prebuilt Accumulator"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Top Value</span>
+            <span>Top Value Acca</span>
           </button>
 
           {/* 3-line Menu Icon to open Settings & Preferences */}

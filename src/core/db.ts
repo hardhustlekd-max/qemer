@@ -4,8 +4,12 @@ import initSqlJs, { Database, SqlValue } from 'sql.js';
 import { HistoricalMatch, Fixture, EngineSettings } from './types.js';
 import { getRelativeDateStr } from './seedData.js';
 
-const DB_DIR = path.resolve(process.cwd(), 'data');
-const DB_FILE = path.join(DB_DIR, 'football.sqlite');
+function getDbPaths() {
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+  const dir = isServerless ? path.resolve('/tmp', 'data') : path.resolve(process.cwd(), 'data');
+  const file = path.join(dir, 'football.sqlite');
+  return { dir, file };
+}
 
 export class FootballDB {
   private db: Database | null = null;
@@ -15,21 +19,29 @@ export class FootballDB {
   async init(): Promise<void> {
     if (this.isInitialized && this.db) return;
 
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
+    const { dir: dbDir, file: dbFile } = getDbPaths();
+    try {
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+    } catch {
+      // Running in-memory if directory creation restricted
     }
 
     this.SQL = await initSqlJs();
 
-    if (fs.existsSync(DB_FILE)) {
-      try {
-        const fileBuffer = fs.readFileSync(DB_FILE);
+    let loadedFromDisk = false;
+    try {
+      if (fs.existsSync(dbFile)) {
+        const fileBuffer = fs.readFileSync(dbFile);
         this.db = new this.SQL.Database(fileBuffer);
-      } catch (err) {
-        console.error('Failed to load existing SQLite database from disk, creating new one:', err);
-        this.db = new this.SQL.Database();
+        loadedFromDisk = true;
       }
-    } else {
+    } catch (err) {
+      console.warn('Could not read existing SQLite database from disk, creating in-memory:', err);
+    }
+
+    if (!loadedFromDisk || !this.db) {
       this.db = new this.SQL.Database();
     }
 
@@ -43,11 +55,15 @@ export class FootballDB {
   private saveToDisk(): void {
     if (!this.db) return;
     try {
+      const { dir: dbDir, file: dbFile } = getDbPaths();
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
       const data = this.db.export();
       const buffer = Buffer.from(data);
-      fs.writeFileSync(DB_FILE, buffer);
+      fs.writeFileSync(dbFile, buffer);
     } catch (err) {
-      console.error('Error saving SQLite database to disk:', err);
+      // In serverless / read-only environment, keep running in-memory gracefully
     }
   }
 

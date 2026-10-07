@@ -1,42 +1,18 @@
 import React from 'react';
-import { Shield, Sparkles, TrendingUp, Info, PlusCircle, Check, Flame } from 'lucide-react';
-import { Fixture, AccaLeg, MarketOption } from '../core/types.js';
+import { Shield, Sparkles, Info } from 'lucide-react';
+import { Fixture } from '../core/types.js';
 
 interface FixtureCardProps {
   fixture: Fixture;
   onSelectDetail: (fixture: Fixture) => void;
-  onAddLegToSlip: (leg: AccaLeg) => void;
-  isLegInSlip: (fixtureId: string, marketKey: MarketOption['key']) => boolean;
 }
 
 export const FixtureCard: React.FC<FixtureCardProps> = ({
   fixture,
   onSelectDetail,
-  onAddLegToSlip,
-  isLegInSlip,
 }) => {
   const pred = fixture.prediction;
   const bestValue = fixture.bestValueMarket;
-
-  const handleAddMarket = (m: MarketOption, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onAddLegToSlip({
-      fixtureId: fixture.id,
-      fixtureDate: fixture.matchDate,
-      league: fixture.leagueName,
-      homeTeam: fixture.homeTeam,
-      awayTeam: fixture.awayTeam,
-      marketKey: m.key,
-      marketName: m.name,
-      selection: m.name,
-      odds: m.odds,
-      probability: m.probability,
-      expectedValue: m.expectedValue,
-      reasoning: `Poisson Model: ${(m.probability * 100).toFixed(1)}% prob @ ${m.odds.toFixed(2)} odds`,
-      isBanker: m.isBanker,
-      isPositiveEV: m.isPositiveEV,
-    });
-  };
 
   const homeWinMarket = fixture.markets?.find((m) => m.key === 'HOME_WIN');
   const drawMarket = fixture.markets?.find((m) => m.key === 'DRAW');
@@ -79,9 +55,16 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
         <div className="grid grid-cols-12 items-center gap-2 my-2">
           {/* Home Team */}
           <div className="col-span-5 flex flex-col">
-            <span className="text-sm font-bold text-white tracking-tight truncate" title={fixture.homeTeam}>
-              {fixture.homeTeam}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-sm font-bold text-white tracking-tight truncate" title={fixture.homeTeam}>
+                {fixture.homeTeam}
+              </span>
+              {pred?.homeWinProb !== undefined && (
+                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-950/70 text-emerald-400 border border-emerald-800 shrink-0" title={`${fixture.homeTeam} Win Probability: ${Math.round(pred.homeWinProb * 100)}%`}>
+                  {Math.round(pred.homeWinProb * 100)}%
+                </span>
+              )}
+            </div>
             {pred && (
               <span className="text-[11px] text-slate-400 font-mono">
                 xG: <strong className="text-emerald-400">{pred.homeXG}</strong>
@@ -94,7 +77,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">VS</span>
             <button
               onClick={() => onSelectDetail(fixture)}
-              className="mt-0.5 text-[10px] text-slate-400 hover:text-cyan-400 flex items-center gap-0.5 transition-colors"
+              className="mt-0.5 text-[10px] text-slate-400 hover:text-cyan-400 flex items-center gap-0.5 transition-colors cursor-pointer"
               title="View Poisson probability matrix & team radar"
             >
               <Info className="w-3 h-3" />
@@ -104,9 +87,16 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
 
           {/* Away Team */}
           <div className="col-span-5 flex flex-col items-end text-right">
-            <span className="text-sm font-bold text-white tracking-tight truncate" title={fixture.awayTeam}>
-              {fixture.awayTeam}
-            </span>
+            <div className="flex items-center justify-end gap-1.5 min-w-0">
+              {pred?.awayWinProb !== undefined && (
+                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-950/70 text-cyan-400 border border-cyan-800 shrink-0" title={`${fixture.awayTeam} Win Probability: ${Math.round(pred.awayWinProb * 100)}%`}>
+                  {Math.round(pred.awayWinProb * 100)}%
+                </span>
+              )}
+              <span className="text-sm font-bold text-white tracking-tight truncate" title={fixture.awayTeam}>
+                {fixture.awayTeam}
+              </span>
+            </div>
             {pred && (
               <span className="text-[11px] text-slate-400 font-mono">
                 xG: <strong className="text-cyan-400">{pred.awayXG}</strong>
@@ -145,48 +135,27 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
 
         {/* Best Value Pick Recommendation */}
         {bestValue && (
-          <div className="mt-2.5 mb-3 p-2 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between text-xs">
+          <div className="mt-2.5 mb-3 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Pick:</span>
+              <span className="text-[10px] font-bold uppercase text-slate-400">Top Value Pick:</span>
               <span className="font-semibold text-slate-200 truncate">{bestValue.name}</span>
-              <span className="font-mono font-bold text-white bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">
-                @{bestValue.odds.toFixed(2)}
-              </span>
             </div>
-            <button
-              onClick={(e) => handleAddMarket(bestValue, e)}
-              className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1 shrink-0 transition-all ${
-                isLegInSlip(fixture.id, bestValue.key)
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800'
-              }`}
-            >
-              {isLegInSlip(fixture.id, bestValue.key) ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  <span>Added</span>
-                </>
-              ) : (
-                <>
-                  <PlusCircle className="w-3 h-3" />
-                  <span>Add Pick</span>
-                </>
-              )}
-            </button>
+            <span className="font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded text-[11px] border border-slate-700">
+              @{bestValue.odds.toFixed(2)}
+            </span>
           </div>
         )}
       </div>
 
-      {/* Bookmaker Odds 1X2 Buttons */}
+      {/* Bookmaker Odds 1X2 Info */}
       <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800/60">
-        {/* Home Win Button */}
+        {/* Home Win */}
         {homeWinMarket && (
           <button
-            onClick={(e) => handleAddMarket(homeWinMarket, e)}
-            className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center ${
-              isLegInSlip(fixture.id, 'HOME_WIN')
-                ? 'bg-emerald-600 border-emerald-500 text-white'
-                : homeWinMarket.isPositiveEV
+            type="button"
+            onClick={() => onSelectDetail(fixture)}
+            className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
+              homeWinMarket.isPositiveEV
                 ? 'bg-emerald-950/30 hover:bg-emerald-900/40 border-emerald-800/50 text-slate-200'
                 : 'bg-slate-950/60 hover:bg-slate-800 border-slate-800 text-slate-300'
             }`}
@@ -201,14 +170,13 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           </button>
         )}
 
-        {/* Draw Button */}
+        {/* Draw */}
         {drawMarket && (
           <button
-            onClick={(e) => handleAddMarket(drawMarket, e)}
-            className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center ${
-              isLegInSlip(fixture.id, 'DRAW')
-                ? 'bg-emerald-600 border-emerald-500 text-white'
-                : drawMarket.isPositiveEV
+            type="button"
+            onClick={() => onSelectDetail(fixture)}
+            className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
+              drawMarket.isPositiveEV
                 ? 'bg-emerald-950/30 hover:bg-emerald-900/40 border-emerald-800/50 text-slate-200'
                 : 'bg-slate-950/60 hover:bg-slate-800 border-slate-800 text-slate-300'
             }`}
@@ -223,14 +191,13 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           </button>
         )}
 
-        {/* Away Win Button */}
+        {/* Away Win */}
         {awayWinMarket && (
           <button
-            onClick={(e) => handleAddMarket(awayWinMarket, e)}
-            className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center ${
-              isLegInSlip(fixture.id, 'AWAY_WIN')
-                ? 'bg-emerald-600 border-emerald-500 text-white'
-                : awayWinMarket.isPositiveEV
+            type="button"
+            onClick={() => onSelectDetail(fixture)}
+            className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center cursor-pointer ${
+              awayWinMarket.isPositiveEV
                 ? 'bg-emerald-950/30 hover:bg-emerald-900/40 border-emerald-800/50 text-slate-200'
                 : 'bg-slate-950/60 hover:bg-slate-800 border-slate-800 text-slate-300'
             }`}

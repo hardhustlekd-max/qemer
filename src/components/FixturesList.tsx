@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, Layers, LayoutList, LayoutGrid, Calendar } from 'lucide-react';
-import { Fixture, AccaLeg, MarketOption } from '../core/types.js';
+import { Search, ChevronDown, Layers, LayoutList, LayoutGrid, Calendar, Sparkles } from 'lucide-react';
+import { Fixture, MarketOption } from '../core/types.js';
 import { getRelativeDateStr } from '../core/seedData.js';
 import { FixtureCard } from './FixtureCard.js';
 import { SimplifiedPredictionsWireframe } from './SimplifiedPredictionsWireframe.js';
@@ -9,28 +9,18 @@ interface FixturesListProps {
   fixtures: Fixture[];
   isLoading: boolean;
   onSelectDetail: (fixture: Fixture) => void;
-  onAddLegToSlip: (leg: AccaLeg) => void;
-  isLegInSlip: (fixtureId: string, marketKey: MarketOption['key']) => boolean;
   selectedLeague: string;
   onSelectLeague: (league: string) => void;
-  onGenerateAcca?: (params: any) => void;
-  onQuickGenerate?: (strategy: 'BANKER' | 'VALUE_HUNTER', dateFilter?: string) => void;
-  onToggleCustomSlip?: () => void;
-  isCustomSlipOpen?: boolean;
+  onViewPrebuiltAccas?: () => void;
 }
 
 export const FixturesList: React.FC<FixturesListProps> = ({
   fixtures,
   isLoading,
   onSelectDetail,
-  onAddLegToSlip,
-  isLegInSlip,
   selectedLeague,
   onSelectLeague,
-  onGenerateAcca,
-  onQuickGenerate,
-  onToggleCustomSlip,
-  isCustomSlipOpen,
+  onViewPrebuiltAccas,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM'>('TODAY');
@@ -39,25 +29,6 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   const [filterType, setFilterType] = useState<'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG'>('ALL');
   const [viewMode, setViewMode] = useState<'WIREFRAME' | 'CARDS'>('WIREFRAME');
   const [marketChoiceFilter, setMarketChoiceFilter] = useState<'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS'>('BEST_VALUE');
-
-  const handleQuickSlipSelect = (value: string) => {
-    if (!value) return;
-    if (value === 'TODAY_SLIP') {
-      onGenerateAcca?.({
-        strategy: 'VALUE_HUNTER',
-        legCount: 10,
-        minProbability: 0.50,
-        stake: 10,
-        dateFilter: 'TODAY',
-      });
-    } else if (value === 'SAFE_PICKS') {
-      onQuickGenerate?.('BANKER', dateFilter);
-    } else if (value === 'TOP_VALUE') {
-      onQuickGenerate?.('VALUE_HUNTER', dateFilter);
-    } else if (value === 'CUSTOM_SLIP') {
-      onToggleCustomSlip?.();
-    }
-  };
 
   const dateOptions = [
     { key: 'TODAY' as const, label: "Today's Picks" },
@@ -85,7 +56,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
 
   const marketOptions = [
     { key: 'BEST_VALUE' as const, label: 'Top Picks' },
-    { key: 'OVER_UNDER' as const, label: 'Over/Under' },
+    { key: 'OVER_UNDER' as const, label: 'Over Under' },
     { key: '1X2' as const, label: '1X2 Match Winner' },
     { key: 'BTTS' as const, label: 'Both Teams to Score' },
   ];
@@ -146,12 +117,12 @@ export const FixturesList: React.FC<FixturesListProps> = ({
       <div className="bg-white dark:bg-[#0B0F17] border border-slate-300 dark:border-slate-800 p-2.5 sm:p-3 rounded-2xl shadow-xs space-y-2">
         {/* Controls Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center">
-          {/* Date Range & Quick Slips Section (Defaulted to Today) */}
+          {/* Date Range & Prebuilt Acca Button */}
           <div className="col-span-2 lg:col-span-4 relative min-w-0">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-emerald-500" />
-                <span>Date Range &amp; Slips</span>
+                <span>Date Range</span>
               </span>
             </label>
             <div className="grid grid-cols-2 gap-1.5">
@@ -172,35 +143,18 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                 <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
               </div>
 
-              {/* Quick Slip Dropdown (Today's Slip, Safe Picks, Top Value) */}
-              <div className="relative min-w-0">
-                <select
-                  id="quick-slips-dropdown"
-                  defaultValue=""
-                  onChange={(e) => {
-                    handleQuickSlipSelect(e.target.value);
-                    e.target.value = '';
-                  }}
-                  className="w-full bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl px-2.5 py-1.5 text-xs font-bold text-red-700 dark:text-red-400 appearance-none cursor-pointer pr-7 focus:outline-none truncate"
+              {/* View Prebuilt Accas Shortcut Button */}
+              {onViewPrebuiltAccas && (
+                <button
+                  type="button"
+                  onClick={onViewPrebuiltAccas}
+                  className="w-full bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 rounded-xl px-2.5 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1 transition-all cursor-pointer truncate shadow-2xs"
+                  title="View AI Prebuilt Accumulators"
                 >
-                  <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-500">
-                    ⚡ Quick Slip...
-                  </option>
-                  <option value="TODAY_SLIP" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    🔥 Today&apos;s Slip
-                  </option>
-                  <option value="SAFE_PICKS" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    🛡️ Safe Picks
-                  </option>
-                  <option value="TOP_VALUE" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    ✨ Top Value
-                  </option>
-                  <option value="CUSTOM_SLIP" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    🎯 {isCustomSlipOpen ? 'Hide Custom Slip' : 'Custom Slip Builder'}
-                  </option>
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-red-500 dark:text-red-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
-              </div>
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="truncate">Prebuilt Accas</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -248,11 +202,11 @@ export const FixturesList: React.FC<FixturesListProps> = ({
             </div>
           </div>
 
-          {/* Market Choice Dropdown */}
+          {/* Market Focus Dropdown */}
           {viewMode === 'WIREFRAME' && (
             <div className="col-span-1 lg:col-span-2 relative min-w-0">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
-                Choices Column
+                Market
               </label>
               <div className="relative">
                 <select
@@ -275,7 +229,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
           {/* Search & View Toggle Column */}
           <div className={`${viewMode === 'WIREFRAME' ? 'col-span-2 sm:col-span-2 lg:col-span-2' : 'col-span-2 sm:col-span-2 lg:col-span-4'} flex flex-col justify-end min-w-0`}>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
-              Search &amp; View
+              Search
             </label>
             <div className="flex items-center gap-1.5 min-w-0">
               <div className="relative flex-1 min-w-0">
@@ -365,8 +319,6 @@ export const FixturesList: React.FC<FixturesListProps> = ({
         <SimplifiedPredictionsWireframe
           fixtures={filteredFixtures}
           onSelectDetail={onSelectDetail}
-          onAddLegToSlip={onAddLegToSlip}
-          isLegInSlip={isLegInSlip}
           marketFilter={marketChoiceFilter}
         />
       ) : (
@@ -376,8 +328,6 @@ export const FixturesList: React.FC<FixturesListProps> = ({
               key={fixture.id}
               fixture={fixture}
               onSelectDetail={onSelectDetail}
-              onAddLegToSlip={onAddLegToSlip}
-              isLegInSlip={isLegInSlip}
             />
           ))}
         </div>

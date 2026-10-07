@@ -45,6 +45,9 @@ export interface UpcomingFixtureSchema {
   b365_under25?: number | null;
   b365_btts_yes?: number | null;
   b365_btts_no?: number | null;
+  home_win_prob?: number | null; // Calculated Poisson home win probability (0-1)
+  draw_prob?: number | null; // Calculated Poisson draw probability (0-1)
+  away_win_prob?: number | null; // Calculated Poisson away win probability (0-1)
   status: 'SCHEDULED' | 'LIVE' | 'FINISHED' | 'POSTPONED';
 }
 
@@ -56,12 +59,32 @@ export interface AppSettingsSchema {
 export type QuickSlipStrategy = 'TODAY_SLIP' | 'SAFE_PICKS' | 'TOP_VALUE' | 'CUSTOM_SLIP';
 export type DateFilterScope = 'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM';
 export type MarketChoiceFilter = 'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS';
+export type PrebuiltCategory = 'BANKER' | 'VALUE_HUNTER' | 'HIGH_GOALS' | 'MEGA_COMBO';
+
+export interface PrebuiltAccumulatorSchema {
+  id: string;
+  category: PrebuiltCategory;
+  name: string;
+  combined_odds: number;
+  combined_prob: number;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
+  legs_json: string;
+  summary_text: string;
+  created_at: string;
+}
 
 export interface TablePaginationSchema {
   currentPage: number;
   pageSize: number;
   totalItems: number;
   totalPages: number;
+}
+
+export interface ServerlessDeploymentConfigSchema {
+  api_prefix: string;
+  is_serverless: boolean;
+  db_storage_mode: 'file' | 'in_memory' | 'temp_volume';
+  updated_at: string;
 }
 
 export interface LiveScoresCacheSchema {
