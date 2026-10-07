@@ -97,10 +97,13 @@ export interface AppThemeConfigSchema {
 export interface ServerlessDeploymentConfigSchema {
   api_prefix: string;
   is_serverless: boolean;
+  process_type: 'persistent_node_process' | 'serverless';
   db_storage_mode: 'file' | 'in_memory' | 'temp_volume';
+  db_file_path: './data/football.sqlite';
   auto_seed_on_boot: boolean;
   historical_records_count: number;
   upcoming_fixtures_count: number;
+  vercel_catchall_supported: boolean;
   updated_at: string;
 }
 

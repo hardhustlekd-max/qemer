@@ -1,4 +1,4 @@
-export type LeagueCode = 'E0' | 'SP1' | 'D1' | 'I1' | 'F1' | 'UCL';
+export type LeagueCode = 'E0' | 'SP1' | 'D1' | 'I1' | 'F1' | 'UCL' | 'UEL' | 'N1' | 'P1' | 'BRA' | 'MLS' | 'SPL' | 'JPL' | string;
 
 export interface HistoricalMatch {
   id: string;
@@ -117,6 +117,7 @@ export interface Fixture {
   bestValueMarket?: MarketOption;
   homeStats?: TeamStatsSummary;
   awayStats?: TeamStatsSummary;
+  score?: { home: number; away: number };
 }
 
 export interface AccaLeg {

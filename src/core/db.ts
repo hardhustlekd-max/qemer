@@ -3,13 +3,14 @@ import path from 'path';
 import initSqlJs, { Database, SqlValue } from 'sql.js';
 import { HistoricalMatch, Fixture, EngineSettings } from './types.js';
 import { getRelativeDateStr } from './seedData.js';
-import { getInitialHistoricalMatches } from './initialDbDataset.js';
+import { getInitialHistoricalMatches, getInitialUpcomingFixtures } from './initialDbDataset.js';
 
 function getDbPaths() {
-  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
-  const dir = isServerless ? path.resolve('/tmp', 'data') : path.resolve(process.cwd(), 'data');
-  const file = path.join(dir, 'football.sqlite');
-  return { dir, file };
+  const localDir = path.resolve(process.cwd(), 'data');
+  const localFile = path.join(localDir, 'football.sqlite');
+  const tmpDir = path.resolve('/tmp', 'data');
+  const tmpFile = path.join(tmpDir, 'football.sqlite');
+  return { localDir, localFile, tmpDir, tmpFile };
 }
 
 export class FootballDB {
@@ -32,14 +33,15 @@ export class FootballDB {
     if (this.isInitialized && this.db) return;
 
     this.fallbackHistoricalMatches = getInitialHistoricalMatches();
+    this.fallbackUpcomingFixtures = getInitialUpcomingFixtures();
 
-    const { dir: dbDir, file: dbFile } = getDbPaths();
+    const { localDir, localFile, tmpFile } = getDbPaths();
     try {
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
+      if (!fs.existsSync(localDir)) {
+        fs.mkdirSync(localDir, { recursive: true });
       }
     } catch {
-      // Running in-memory if directory creation restricted
+      // Local directory creation restricted, will use in-memory/tmp
     }
 
     try {
@@ -47,8 +49,12 @@ export class FootballDB {
 
       let loadedFromDisk = false;
       try {
-        if (fs.existsSync(dbFile)) {
-          const fileBuffer = fs.readFileSync(dbFile);
+        if (fs.existsSync(localFile)) {
+          const fileBuffer = fs.readFileSync(localFile);
+          this.db = new this.SQL.Database(fileBuffer);
+          loadedFromDisk = true;
+        } else if (fs.existsSync(tmpFile)) {
+          const fileBuffer = fs.readFileSync(tmpFile);
           this.db = new this.SQL.Database(fileBuffer);
           loadedFromDisk = true;
         }
@@ -73,15 +79,26 @@ export class FootballDB {
   private saveToDisk(): void {
     if (!this.db) return;
     try {
-      const { dir: dbDir, file: dbFile } = getDbPaths();
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
+      const { localDir, localFile, tmpDir, tmpFile } = getDbPaths();
       const data = this.db.export();
       const buffer = Buffer.from(data);
-      fs.writeFileSync(dbFile, buffer);
+
+      // Primary: maintain local disk persistence under ./data/football.sqlite
+      try {
+        if (!fs.existsSync(localDir)) {
+          fs.mkdirSync(localDir, { recursive: true });
+        }
+        fs.writeFileSync(localFile, buffer);
+        return;
+      } catch {
+        // Fallback to /tmp if primary directory is mounted read-only
+        if (!fs.existsSync(tmpDir)) {
+          fs.mkdirSync(tmpDir, { recursive: true });
+        }
+        fs.writeFileSync(tmpFile, buffer);
+      }
     } catch {
-      // In serverless / read-only environment, keep running in-memory gracefully
+      // In-memory persistent state maintained safely
     }
   }
 
@@ -186,6 +203,15 @@ export class FootballDB {
       if (histCount < 50) {
         const initialMatches = getInitialHistoricalMatches();
         this.insertHistoricalMatches(initialMatches);
+      }
+
+      // Check upcoming fixtures count
+      const fixCountRes = this.db.exec(`SELECT COUNT(*) as count FROM upcoming_fixtures`);
+      const fixCount = fixCountRes[0]?.values[0]?.[0] ? Number(fixCountRes[0].values[0][0]) : 0;
+
+      if (fixCount < 5) {
+        const initialFixtures = getInitialUpcomingFixtures();
+        this.insertUpcomingFixtures(initialFixtures);
       }
     } catch (err) {
       console.error('Error seeding initial SQLite dataset:', err);
@@ -607,6 +633,45 @@ export class FootballDB {
         ) VALUES ('latest_tips', ?, ?, ?, ?, ?)
       `);
       stmt.run([tipsJson, headlineSummary, rawMarkdown, sourcesJson, new Date().toISOString()]);
+      stmt.free();
+      this.saveToDisk();
+    } catch {
+      // ignore
+    }
+  }
+
+  saveUpcomingFixtures(fixtures: Fixture[]): void {
+    this.fallbackUpcomingFixtures = fixtures;
+    if (!this.db) return;
+    try {
+      this.db.run(`DELETE FROM upcoming_fixtures`);
+      const stmt = this.db.prepare(`
+        INSERT OR REPLACE INTO upcoming_fixtures (
+          id, provider_id, league, league_name, match_date, kick_off_time,
+          home_team, away_team, b365_h, b365_d, b365_a, b365_over25, b365_under25,
+          b365_btts_yes, b365_btts_no, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const f of fixtures) {
+        stmt.run([
+          f.id,
+          f.providerId || 'espn',
+          String(f.league),
+          f.leagueName,
+          f.matchDate,
+          f.kickOffTime,
+          f.homeTeam,
+          f.awayTeam,
+          f.odds.homeWin,
+          f.odds.draw,
+          f.odds.awayWin,
+          f.odds.over25 || 1.95,
+          f.odds.under25 || 1.85,
+          f.odds.bttsYes || 1.90,
+          f.odds.bttsNo || 1.80,
+          f.status || 'SCHEDULED',
+        ]);
+      }
       stmt.free();
       this.saveToDisk();
     } catch {

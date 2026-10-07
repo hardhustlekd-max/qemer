@@ -5,9 +5,9 @@ import { db } from './src/core/db.js';
 import { app } from './src/app.js';
 
 async function startServer() {
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  // Initialize SQLite database
+  // Initialize SQLite database and keep persistent in memory
   await db.init();
 
   // Vite integration: development middleware or static production serving

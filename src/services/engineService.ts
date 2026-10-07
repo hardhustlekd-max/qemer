@@ -14,7 +14,7 @@ import { getRelativeDateStr } from '../core/seedData.js';
 import { LiveScore } from '../providers/types.js';
 import { fetchRealLiveScores } from './realLiveScoresService.js';
 import { fetchRealUpcomingFixtures } from './realUpcomingFixturesService.js';
-import { getInitialHistoricalMatches } from '../core/initialDbDataset.js';
+import { getInitialHistoricalMatches, getInitialUpcomingFixtures } from '../core/initialDbDataset.js';
 
 // Default In-Memory Engine State for Universal & Client-Side execution (Vercel, Static, etc.)
 let localSettings: EngineSettings = {
@@ -28,7 +28,7 @@ let localSettings: EngineSettings = {
 };
 
 let localHistoricalMatches: HistoricalMatch[] = getInitialHistoricalMatches();
-let localUpcomingFixtures: Fixture[] = [];
+let localUpcomingFixtures: Fixture[] = getInitialUpcomingFixtures();
 
 const PROVIDER_METADATA: ProviderStatus[] = [
   {

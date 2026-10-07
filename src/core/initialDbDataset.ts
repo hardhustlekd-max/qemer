@@ -1,4 +1,4 @@
-import { HistoricalMatch } from './types.js';
+import { HistoricalMatch, Fixture } from './types.js';
 import { getRelativeDateStr } from './seedData.js';
 
 /**
@@ -199,4 +199,191 @@ export function getInitialHistoricalMatches(): HistoricalMatch[] {
   }
 
   return matches;
+}
+
+export function getInitialUpcomingFixtures(): Fixture[] {
+  const todayStr = getRelativeDateStr(0);
+  const tomorrowStr = getRelativeDateStr(1);
+  const day2Str = getRelativeDateStr(2);
+  const day3Str = getRelativeDateStr(3);
+
+  return [
+    // Premier League (E0)
+    {
+      id: 'fix_e0_1',
+      providerId: 'football_db',
+      league: 'E0',
+      leagueName: 'Premier League',
+      matchDate: todayStr,
+      kickOffTime: '15:00',
+      homeTeam: 'Arsenal',
+      awayTeam: 'Chelsea',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.75, draw: 3.80, awayWin: 4.50, over25: 1.85, under25: 1.95, bttsYes: 1.75, bttsNo: 2.05 },
+    },
+    {
+      id: 'fix_e0_2',
+      providerId: 'football_db',
+      league: 'E0',
+      leagueName: 'Premier League',
+      matchDate: todayStr,
+      kickOffTime: '17:30',
+      homeTeam: 'Liverpool',
+      awayTeam: 'Man City',
+      status: 'SCHEDULED',
+      odds: { homeWin: 2.30, draw: 3.50, awayWin: 2.90, over25: 1.65, under25: 2.20, bttsYes: 1.55, bttsNo: 2.35 },
+    },
+    {
+      id: 'fix_e0_3',
+      providerId: 'football_db',
+      league: 'E0',
+      leagueName: 'Premier League',
+      matchDate: tomorrowStr,
+      kickOffTime: '14:00',
+      homeTeam: 'Aston Villa',
+      awayTeam: 'Tottenham',
+      status: 'SCHEDULED',
+      odds: { homeWin: 2.10, draw: 3.60, awayWin: 3.20, over25: 1.70, under25: 2.10, bttsYes: 1.60, bttsNo: 2.25 },
+    },
+    {
+      id: 'fix_e0_4',
+      providerId: 'football_db',
+      league: 'E0',
+      leagueName: 'Premier League',
+      matchDate: day2Str,
+      kickOffTime: '20:00',
+      homeTeam: 'Newcastle',
+      awayTeam: 'Man United',
+      status: 'SCHEDULED',
+      odds: { homeWin: 2.05, draw: 3.50, awayWin: 3.40, over25: 1.75, under25: 2.05, bttsYes: 1.65, bttsNo: 2.20 },
+    },
+
+    // La Liga (SP1)
+    {
+      id: 'fix_sp1_1',
+      providerId: 'football_db',
+      league: 'SP1',
+      leagueName: 'La Liga',
+      matchDate: todayStr,
+      kickOffTime: '16:15',
+      homeTeam: 'Real Madrid',
+      awayTeam: 'Villarreal',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.45, draw: 4.75, awayWin: 6.50, over25: 1.60, under25: 2.30, bttsYes: 1.70, bttsNo: 2.10 },
+    },
+    {
+      id: 'fix_sp1_2',
+      providerId: 'football_db',
+      league: 'SP1',
+      leagueName: 'La Liga',
+      matchDate: todayStr,
+      kickOffTime: '21:00',
+      homeTeam: 'Barcelona',
+      awayTeam: 'Athletic Bilbao',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.55, draw: 4.20, awayWin: 5.50, over25: 1.65, under25: 2.20, bttsYes: 1.75, bttsNo: 2.05 },
+    },
+    {
+      id: 'fix_sp1_3',
+      providerId: 'football_db',
+      league: 'SP1',
+      leagueName: 'La Liga',
+      matchDate: tomorrowStr,
+      kickOffTime: '18:30',
+      homeTeam: 'Atletico Madrid',
+      awayTeam: 'Real Sociedad',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.80, draw: 3.40, awayWin: 4.80, over25: 2.10, under25: 1.70, bttsYes: 1.95, bttsNo: 1.80 },
+    },
+
+    // Bundesliga (D1)
+    {
+      id: 'fix_d1_1',
+      providerId: 'football_db',
+      league: 'D1',
+      leagueName: 'Bundesliga',
+      matchDate: todayStr,
+      kickOffTime: '15:30',
+      homeTeam: 'Bayern Munich',
+      awayTeam: 'Borussia Dortmund',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.60, draw: 4.50, awayWin: 4.80, over25: 1.45, under25: 2.70, bttsYes: 1.45, bttsNo: 2.65 },
+    },
+    {
+      id: 'fix_d1_2',
+      providerId: 'football_db',
+      league: 'D1',
+      leagueName: 'Bundesliga',
+      matchDate: tomorrowStr,
+      kickOffTime: '17:30',
+      homeTeam: 'Bayer Leverkusen',
+      awayTeam: 'RB Leipzig',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.90, draw: 3.80, awayWin: 3.70, over25: 1.55, under25: 2.40, bttsYes: 1.50, bttsNo: 2.50 },
+    },
+
+    // Serie A (I1)
+    {
+      id: 'fix_i1_1',
+      providerId: 'football_db',
+      league: 'I1',
+      leagueName: 'Serie A',
+      matchDate: todayStr,
+      kickOffTime: '18:00',
+      homeTeam: 'Juventus',
+      awayTeam: 'Napoli',
+      status: 'SCHEDULED',
+      odds: { homeWin: 2.20, draw: 3.20, awayWin: 3.40, over25: 2.15, under25: 1.65, bttsYes: 1.90, bttsNo: 1.90 },
+    },
+    {
+      id: 'fix_i1_2',
+      providerId: 'football_db',
+      league: 'I1',
+      leagueName: 'Serie A',
+      matchDate: todayStr,
+      kickOffTime: '20:45',
+      homeTeam: 'Inter',
+      awayTeam: 'AC Milan',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.95, draw: 3.50, awayWin: 3.80, over25: 1.80, under25: 2.00, bttsYes: 1.70, bttsNo: 2.10 },
+    },
+    {
+      id: 'fix_i1_3',
+      providerId: 'football_db',
+      league: 'I1',
+      leagueName: 'Serie A',
+      matchDate: tomorrowStr,
+      kickOffTime: '15:00',
+      homeTeam: 'Atalanta',
+      awayTeam: 'Roma',
+      status: 'SCHEDULED',
+      odds: { homeWin: 2.00, draw: 3.50, awayWin: 3.60, over25: 1.75, under25: 2.05, bttsYes: 1.65, bttsNo: 2.20 },
+    },
+
+    // UEFA Champions League (UCL)
+    {
+      id: 'fix_ucl_1',
+      providerId: 'football_db',
+      league: 'UCL',
+      leagueName: 'UEFA Champions League',
+      matchDate: day2Str,
+      kickOffTime: '21:00',
+      homeTeam: 'Real Madrid',
+      awayTeam: 'Bayern Munich',
+      status: 'SCHEDULED',
+      odds: { homeWin: 2.15, draw: 3.60, awayWin: 3.10, over25: 1.60, under25: 2.30, bttsYes: 1.50, bttsNo: 2.50 },
+    },
+    {
+      id: 'fix_ucl_2',
+      providerId: 'football_db',
+      league: 'UCL',
+      leagueName: 'UEFA Champions League',
+      matchDate: day3Str,
+      kickOffTime: '21:00',
+      homeTeam: 'Man City',
+      awayTeam: 'Paris Saint-Germain',
+      status: 'SCHEDULED',
+      odds: { homeWin: 1.70, draw: 4.00, awayWin: 4.50, over25: 1.55, under25: 2.40, bttsYes: 1.55, bttsNo: 2.35 },
+    },
+  ];
 }

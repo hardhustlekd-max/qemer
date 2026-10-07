@@ -26,7 +26,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   const [dateFilter, setDateFilter] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM'>('TODAY');
   const [customStartDate, setCustomStartDate] = useState(getRelativeDateStr(0));
   const [customEndDate, setCustomEndDate] = useState(getRelativeDateStr(3));
-  const [filterType, setFilterType] = useState<'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG'>('BANKER');
   const [viewMode, setViewMode] = useState<'WIREFRAME' | 'CARDS'>('WIREFRAME');
   const [marketChoiceFilter, setMarketChoiceFilter] = useState<'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS'>('BEST_VALUE');
 
@@ -40,11 +40,20 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   ];
 
   const leagueOptions = [
-    { code: 'ALL', name: 'All Leagues' },
+    { code: 'ALL', name: 'All Leagues Worldwide' },
     { code: 'E0', name: 'Premier League' },
     { code: 'SP1', name: 'La Liga' },
     { code: 'D1', name: 'Bundesliga' },
     { code: 'I1', name: 'Serie A' },
+    { code: 'F1', name: 'Ligue 1' },
+    { code: 'UCL', name: 'UEFA Champions League' },
+    { code: 'UEL', name: 'UEFA Europa League' },
+    { code: 'N1', name: 'Eredivisie' },
+    { code: 'P1', name: 'Primeira Liga' },
+    { code: 'BRA', name: 'Brasileirão' },
+    { code: 'MLS', name: 'MLS (USA)' },
+    { code: 'SPL', name: 'Saudi Pro League' },
+    { code: 'JPL', name: 'J1 League' },
   ];
 
   const filterOptions = [
