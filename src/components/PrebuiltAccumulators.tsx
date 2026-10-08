@@ -154,7 +154,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
   const potentialPayout = activeSlip ? (stakeBenchmark * activeSlip.combinedOdds).toFixed(2) : '0.00';
 
   return (
-    <div className="bg-white dark:bg-[#0B0F17] rounded-3xl p-3.5 sm:p-5 shadow-xs space-y-3.5 font-sans">
+    <div className="bg-white dark:bg-[#0B0F17] rounded-2xl p-3 shadow-xs space-y-3 font-sans">
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800">
         <div>
@@ -181,7 +181,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
       </div>
 
       {/* Category Pills Switcher */}
-      <div className="bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl flex items-center gap-1 overflow-x-auto no-scrollbar shadow-xs">
+      <div className="bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl flex items-center gap-1 overflow-x-auto no-scrollbar shadow-xs">
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat.id;
           const slip = prebuiltSlips[cat.id];
@@ -191,7 +191,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
               key={cat.id}
               type="button"
               onClick={() => setSelectedCategory(cat.id)}
-              className={`flex-1 min-w-[80px] px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`flex-1 min-w-[80px] px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-1.5 ${
                 isSelected
                   ? 'bg-white dark:bg-emerald-600 text-slate-900 dark:text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -212,14 +212,14 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
 
       {/* Slip Details & Stats Bar */}
       {activeSlip && (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {/* Key Metrics Chips */}
-          <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2.5 shadow-xs">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
                 {activeSlip.combinedOdds.toFixed(2)}x
               </span>
-              <span className="bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-slate-900 dark:text-white">
+              <span className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-slate-900 dark:text-white">
                 {(activeSlip.combinedProb * 100).toFixed(0)}% Win
               </span>
               {risk && (
@@ -227,7 +227,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
                   {risk.label}
                 </span>
               )}
-              <span className="bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+              <span className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-slate-700 dark:text-slate-300">
                 Payout £{potentialPayout}
               </span>
             </div>
@@ -253,18 +253,18 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
           </div>
 
           {/* Legs List */}
-          <div className="rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-900/60 shadow-xs divide-y divide-slate-100 dark:divide-slate-800/40">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/40">
             {activeSlip.legs.map((leg, index) => {
               const matchedFixture = fixtures.find((f) => f.id === leg.fixtureId);
 
               return (
                 <div
                   key={`${leg.fixtureId}-${leg.marketKey}`}
-                  className="px-3.5 py-2.5 hover:bg-slate-100/60 dark:hover:bg-slate-900 transition-colors flex items-center justify-between gap-2.5 text-xs"
+                  className="py-2 hover:bg-slate-50/60 dark:hover:bg-slate-900/40 transition-colors flex items-center justify-between gap-2 text-xs"
                 >
                   {/* Leg Index & Teams */}
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-5 h-5 rounded-lg bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-mono text-[11px] font-bold flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-5 h-5 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-mono text-[11px] font-bold flex items-center justify-center shrink-0 shadow-xs">
                       {index + 1}
                     </span>
 
@@ -289,11 +289,11 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
                   </div>
 
                   {/* Selection & Odds */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-lg bg-white dark:bg-slate-950 shadow-xs">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-950 shadow-xs">
                       {leg.selection}
                     </span>
-                    <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-950 shadow-xs">
+                    <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-950 shadow-xs">
                       @{leg.odds.toFixed(2)}
                     </span>
                   </div>

@@ -27,6 +27,11 @@ export default function App() {
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [isLoadingFixtures, setIsLoadingFixtures] = useState<boolean>(true);
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
+  const [dateFilter, setDateFilter] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM'>('ALL');
+  const [marketChoiceFilter, setMarketChoiceFilter] = useState<'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS'>('BEST_VALUE');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'WIREFRAME' | 'CARDS'>('WIREFRAME');
+  const [isLeagueModalOpen, setIsLeagueModalOpen] = useState<boolean>(false);
 
   // Grounded Trending Tips state
   const [tipsData, setTipsData] = useState<TrendingTipsData | null>(null);
@@ -216,18 +221,41 @@ export default function App() {
       <LiveScoresTicker liveScores={liveScores} />
 
       {/* Main Tab Bar Placed Under Live Matches Bar */}
-      <MainTabBar activeTab={activeTab} onSelectTab={setActiveTab} />
+      <MainTabBar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        selectedLeague={selectedLeague}
+        onSelectLeague={setSelectedLeague}
+        dateFilter={dateFilter}
+        setDateFilter={setDateFilter}
+        marketChoiceFilter={marketChoiceFilter}
+        setMarketChoiceFilter={setMarketChoiceFilter}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        setIsLeagueModalOpen={setIsLeagueModalOpen}
+      />
 
       {/* Main Content Dashboard */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-5 space-y-5">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-2.5 space-y-2.5">
         {activeTab === 'FIXTURES' && (
           <FixturesList
             fixtures={fixtures}
             isLoading={isLoadingFixtures}
             onSelectDetail={(f) => setSelectedDetailFixture(f)}
             selectedLeague={selectedLeague}
-            onSelectLeague={handleSelectLeague}
-            onViewPrebuiltAccas={() => setActiveTab('ACCAS')}
+            onSelectLeague={setSelectedLeague}
+            dateFilter={dateFilter}
+            setDateFilter={setDateFilter}
+            marketChoiceFilter={marketChoiceFilter}
+            setMarketChoiceFilter={setMarketChoiceFilter}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            isLeagueModalOpen={isLeagueModalOpen}
+            setIsLeagueModalOpen={setIsLeagueModalOpen}
           />
         )}
 

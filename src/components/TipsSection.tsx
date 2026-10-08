@@ -75,7 +75,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-[#0B0F17] rounded-3xl p-3.5 sm:p-5 shadow-xs space-y-3.5 font-sans">
+    <div className="bg-white dark:bg-[#0B0F17] rounded-2xl p-3 shadow-xs space-y-3 font-sans">
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800">
         <div>
@@ -97,9 +97,9 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-slate-50 dark:bg-slate-900/60 p-2 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
         {/* Category Pills */}
-        <div className="bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl flex items-center gap-1 overflow-x-auto no-scrollbar shadow-xs shrink-0">
+        <div className="bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl flex items-center gap-1 overflow-x-auto no-scrollbar shadow-xs shrink-0">
           {[
             { id: 'ALL' as const, label: 'All' },
             { id: 'BETTING_TIP' as const, label: 'Tips' },
@@ -110,7 +110,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
             <button
               key={tab.id}
               onClick={() => setSelectedCategory(tab.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 selectedCategory === tab.id
                   ? 'bg-white dark:bg-emerald-600 text-slate-900 dark:text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -129,28 +129,28 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
             placeholder="Search trends..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white dark:bg-slate-950 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none font-medium shadow-xs"
+            className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none font-medium shadow-xs"
           />
         </div>
       </div>
 
       {/* Content Rendering */}
       {isLoading ? (
-        <div className="p-8 text-center bg-slate-50 dark:bg-slate-900/60 rounded-2xl space-y-2">
+        <div className="p-6 text-center rounded-xl space-y-2">
           <RefreshCw className="w-6 h-6 text-emerald-500 animate-spin mx-auto" />
           <p className="text-xs text-slate-500 font-medium">Loading Trends...</p>
         </div>
       ) : filteredTips.length === 0 ? (
-        <div className="p-8 text-center bg-slate-50 dark:bg-slate-900/60 rounded-2xl space-y-1.5">
+        <div className="p-6 text-center rounded-xl space-y-1.5">
           <Layers className="w-6 h-6 text-slate-400 mx-auto" />
           <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No items found</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {filteredTips.map((tip) => (
             <div
               key={tip.id}
-              className="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-3.5 shadow-xs flex flex-col justify-between space-y-2 hover:bg-slate-100/70 dark:hover:bg-slate-900/90 transition-all"
+              className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-3 shadow-xs flex flex-col justify-between space-y-2 hover:bg-slate-100/70 dark:hover:bg-slate-900/90 transition-all"
             >
               <div className="space-y-1.5">
                 {/* Badge Row */}
