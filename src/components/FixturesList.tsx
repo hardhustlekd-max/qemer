@@ -198,119 +198,97 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   }, [fixtures, dateFilter, customStartDate, customEndDate, selectedLeague, searchQuery, filterType, baseToday]);
 
   return (
-    <div className="space-y-3 font-sans">
+    <div className="space-y-3.5 font-sans">
       {/* Merged Mobile-Friendly Toolbar with Date Range, League, Filter & Search */}
-      <div className="bg-white dark:bg-[#0B0F17] p-3.5 rounded-3xl shadow-sm space-y-2">
-        {/* Controls Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center">
-          {/* Date Range & Prebuilt Acca Button */}
-          <div className="col-span-2 lg:col-span-4 relative min-w-0">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-emerald-500" />
-                <span>Date Range</span>
-              </span>
-            </label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {/* Date Filter Dropdown */}
-              <div className="relative min-w-0">
-                <select
-                  id="date-filter-dropdown"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value as any)}
-                  className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
+      <div className="bg-white dark:bg-[#0B0F17] p-3.5 sm:p-4 rounded-3xl shadow-xs space-y-3">
+        {/* Controls Grid inside neutral panel */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-center">
+            {/* Date Range & Prebuilt Acca Button */}
+            <div className="col-span-2 lg:col-span-4 relative min-w-0">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-emerald-500" />
+                  <span>Date Range</span>
+                </span>
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {/* Date Filter Dropdown */}
+                <div className="relative min-w-0">
+                  <select
+                    id="date-filter-dropdown"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value as any)}
+                    className="w-full bg-white dark:bg-slate-950 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
+                  >
+                    {dateOptions.map((opt) => (
+                      <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+                </div>
+
+                {/* View Prebuilt Accas Shortcut Button */}
+                {onViewPrebuiltAccas && (
+                  <button
+                    type="button"
+                    onClick={onViewPrebuiltAccas}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-2.5 py-1.5 text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer truncate shadow-xs"
+                    title="View Prebuilt Accumulators"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-white shrink-0" />
+                    <span className="truncate">Prebuilt Accas</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* League Dropdown Filter */}
+            <div className="col-span-1 lg:col-span-2 relative min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                  League
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsLeagueModalOpen(true)}
+                  className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
                 >
-                  {dateOptions.map((opt) => (
-                    <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
-                      {opt.label}
+                  Browse...
+                </button>
+              </div>
+              <div className="relative">
+                <select
+                  id="league-filter-dropdown"
+                  value={selectedLeague}
+                  onChange={(e) => onSelectLeague(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-950 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
+                >
+                  {leagueOptions.map((opt, idx) => (
+                    <option key={`${opt.code}-${idx}`} value={opt.code} className="bg-white dark:bg-slate-900">
+                      {opt.name}
                     </option>
                   ))}
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
               </div>
-
-              {/* View Prebuilt Accas Shortcut Button */}
-              {onViewPrebuiltAccas && (
-                <button
-                  type="button"
-                  onClick={onViewPrebuiltAccas}
-                  className="w-full bg-emerald-50/90 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 rounded-xl px-2.5 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1 transition-all cursor-pointer truncate shadow-xs hover:shadow-sm"
-                  title="View AI Prebuilt Accumulators"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span className="truncate">Prebuilt Accas</span>
-                </button>
-              )}
             </div>
-          </div>
 
-          {/* League Dropdown Filter */}
-          <div className="col-span-1 lg:col-span-2 relative min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                League
-              </label>
-              <button
-                type="button"
-                onClick={() => setIsLeagueModalOpen(true)}
-                className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
-              >
-                Browse 200+...
-              </button>
-            </div>
-            <div className="relative">
-              <select
-                id="league-filter-dropdown"
-                value={selectedLeague}
-                onChange={(e) => onSelectLeague(e.target.value)}
-                className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
-              >
-                {leagueOptions.map((opt, idx) => (
-                  <option key={`${opt.code}-${idx}`} value={opt.code} className="bg-white dark:bg-slate-900">
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
-            </div>
-          </div>
-
-          {/* Picks Strategy Filter Dropdown */}
-          <div className="col-span-1 lg:col-span-2 relative min-w-0">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
-              Filter Picks
-            </label>
-            <div className="relative">
-              <select
-                id="picks-filter-dropdown"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
-                className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
-              >
-                {filterOptions.map((opt) => (
-                  <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
-            </div>
-          </div>
-
-          {/* Market Focus Dropdown */}
-          {viewMode === 'WIREFRAME' && (
+            {/* Picks Strategy Filter Dropdown */}
             <div className="col-span-1 lg:col-span-2 relative min-w-0">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
-                Market
+                Filter Picks
               </label>
               <div className="relative">
                 <select
-                  id="market-column-dropdown"
-                  value={marketChoiceFilter}
-                  onChange={(e) => setMarketChoiceFilter(e.target.value as any)}
-                  className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
+                  id="picks-filter-dropdown"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as any)}
+                  className="w-full bg-white dark:bg-slate-950 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
                 >
-                  {marketOptions.map((opt) => (
+                  {filterOptions.map((opt) => (
                     <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
                       {opt.label}
                     </option>
@@ -319,51 +297,75 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                 <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
               </div>
             </div>
-          )}
 
-          {/* Search & View Toggle Column */}
-          <div className={`${viewMode === 'WIREFRAME' ? 'col-span-2 sm:col-span-2 lg:col-span-2' : 'col-span-2 sm:col-span-2 lg:col-span-4'} flex flex-col justify-end min-w-0`}>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
-              Search
-            </label>
-            <div className="flex items-center gap-1.5 min-w-0">
-              <div className="relative flex-1 min-w-0">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Find team..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl pl-8 pr-2 py-1.5 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none min-w-0 truncate font-medium shadow-xs"
-                />
+            {/* Market Focus Dropdown */}
+            {viewMode === 'WIREFRAME' && (
+              <div className="col-span-1 lg:col-span-2 relative min-w-0">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
+                  Market
+                </label>
+                <div className="relative">
+                  <select
+                    id="market-column-dropdown"
+                    value={marketChoiceFilter}
+                    onChange={(e) => setMarketChoiceFilter(e.target.value as any)}
+                    className="w-full bg-white dark:bg-slate-950 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
+                  >
+                    {marketOptions.map((opt) => (
+                      <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
+                </div>
               </div>
+            )}
 
-              {/* View Switcher Button */}
-              <div className="flex items-center bg-slate-100/90 dark:bg-slate-900/90 rounded-xl p-0.5 shrink-0 shadow-inner">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('WIREFRAME')}
-                  className={`p-1 rounded-lg transition-all cursor-pointer ${
-                    viewMode === 'WIREFRAME'
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                  }`}
-                  title="Table Prediction View"
-                >
-                  <LayoutList className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('CARDS')}
-                  className={`p-1 rounded-lg transition-all cursor-pointer ${
-                    viewMode === 'CARDS'
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                  }`}
-                  title="Card View"
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                </button>
+            {/* Search & View Toggle Column */}
+            <div className={`${viewMode === 'WIREFRAME' ? 'col-span-2 sm:col-span-2 lg:col-span-2' : 'col-span-2 sm:col-span-2 lg:col-span-4'} flex flex-col justify-end min-w-0`}>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
+                Search
+              </label>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Find team..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-950 rounded-xl pl-8 pr-2 py-1.5 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none min-w-0 truncate font-medium shadow-xs"
+                  />
+                </div>
+
+                {/* View Switcher Button */}
+                <div className="flex items-center bg-slate-200/80 dark:bg-slate-950 rounded-xl p-1 shrink-0 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('WIREFRAME')}
+                    className={`p-1 rounded-lg transition-all cursor-pointer ${
+                      viewMode === 'WIREFRAME'
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title="Table View"
+                  >
+                    <LayoutList className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('CARDS')}
+                    className={`p-1 rounded-lg transition-all cursor-pointer ${
+                      viewMode === 'CARDS'
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title="Cards View"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

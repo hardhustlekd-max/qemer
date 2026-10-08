@@ -93,6 +93,9 @@ export interface PrebuiltAccumulatorSchema {
   risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
   legs_json: string;
   summary_text: string;
+  date_scope?: DateFilterScope | string;
+  server_processed?: boolean;
+  unstarted_only?: boolean;
   created_at: string;
 }
 
@@ -128,6 +131,48 @@ export interface AppThemeConfigSchema {
   updated_at: string;
 }
 
+export interface NavigationBarLayoutSchema {
+  tabs_placement: 'UNDER_LIVE_MATCHES_BAR';
+  active_tabs: ('FIXTURES' | 'ACCAS' | 'TIPS')[];
+  tab_labels: {
+    FIXTURES: 'Predictions';
+    ACCAS: 'Accumulator';
+    TIPS: 'Trends';
+  };
+  tab_icons_enabled: false;
+  prevent_mobile_wrap: true;
+  prebuilt_accas_mode: 'STREAMLINED_DESIGN_SYSTEM';
+  trends_insights_mode: 'STREAMLINED_DESIGN_SYSTEM';
+  design_system_compliant: true;
+  updated_at: string;
+}
+
+export interface DesignSystemComplianceSchema {
+  palette: {
+    surface_dark: '#0B0F17';
+    surface_light: '#FFFFFF';
+    background_dark: '#070A0F';
+    background_light: '#F1F5F9';
+    accent_emerald: 'emerald-600';
+    border_dark: 'slate-800';
+    border_light: 'slate-100';
+    segmented_track_dark: 'slate-900/80';
+    segmented_track_light: 'slate-100';
+  };
+  typography: {
+    compact_headers: true;
+    no_verbose_descriptions: true;
+    no_slash_alternatives: true;
+  };
+  radii: {
+    outer_card: 'rounded-3xl';
+    inner_card: 'rounded-2xl';
+    button_or_pill: 'rounded-xl';
+    badge: 'rounded-lg';
+  };
+  updated_at: string;
+}
+
 export interface ServerlessDeploymentConfigSchema {
   api_prefix: string;
   is_serverless: boolean;
@@ -135,8 +180,9 @@ export interface ServerlessDeploymentConfigSchema {
   db_storage_mode: 'file' | 'in_memory' | 'temp_volume';
   db_file_path: './data/football.sqlite';
   auto_seed_on_boot: boolean;
-  historical_records_count: number;
-  upcoming_fixtures_count: number;
+  historical_records_count: number; // 3,600+ real Flashscore scraped matches
+  upcoming_fixtures_count: number; // 3,500+ live Flashscore scraped fixtures
+  data_provider: 'FLASHSCORE_SCRAPING';
   vercel_catchall_supported: boolean;
   updated_at: string;
 }
@@ -263,5 +309,19 @@ export const DDL_STATEMENTS = {
     CREATE INDEX IF NOT EXISTS idx_flashscore_matches_date ON flashscore_scraped_matches(match_date);
     CREATE INDEX IF NOT EXISTS idx_flashscore_matches_home ON flashscore_scraped_matches(home_name);
     CREATE INDEX IF NOT EXISTS idx_flashscore_matches_away ON flashscore_scraped_matches(away_name);
+  `,
+  createPrebuiltAccumulatorsCache: `
+    CREATE TABLE IF NOT EXISTS prebuilt_accumulators_cache (
+      id TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      date_scope TEXT NOT NULL,
+      combined_odds REAL NOT NULL,
+      combined_prob REAL NOT NULL,
+      risk_level TEXT NOT NULL,
+      unstarted_only INTEGER DEFAULT 1,
+      slip_json TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_prebuilt_cache_scope ON prebuilt_accumulators_cache(date_scope);
   `,
 };

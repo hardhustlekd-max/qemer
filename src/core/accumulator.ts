@@ -19,6 +19,102 @@ export interface AccaGenerationParams {
   customEndDate?: string;
 }
 
+/**
+ * Determines whether a football match has already kicked off or finished
+ */
+export function isMatchStarted(f: Fixture): boolean {
+  if (!f) return true;
+
+  // 1. Status check: live, in-play, finished, or postponed matches are treated as started/unavailable
+  if (f.status) {
+    const s = String(f.status).toUpperCase().trim();
+    if (
+      s === 'LIVE' ||
+      s === 'FINISHED' ||
+      s === 'IN_PLAY' ||
+      s === 'IN' ||
+      s === 'POST' ||
+      s === 'FT' ||
+      s === 'HT' ||
+      s === 'POSTPONED' ||
+      s === 'CANCELLED' ||
+      s === 'SUSPENDED' ||
+      s === 'ABANDONED' ||
+      s === 'AET' ||
+      s === 'PEN' ||
+      s === '1H' ||
+      s === '2H' ||
+      s === 'BREAK' ||
+      s === 'INT' ||
+      s === 'EXTRA_TIME' ||
+      s === 'PENALTIES'
+    ) {
+      return true;
+    }
+    if (s !== 'SCHEDULED' && s !== 'TIMED' && s !== 'NS' && s !== 'NOT_STARTED' && s !== 'UPCOMING') {
+      return true;
+    }
+  }
+
+  // 2. Score check: if match already has scored goals and is not explicitly scheduled/timed
+  if (f.score && (f.score.home !== undefined || f.score.away !== undefined)) {
+    if (f.status !== 'SCHEDULED' && f.status !== 'TIMED') {
+      return true;
+    }
+    if ((f.score.home || 0) > 0 || (f.score.away || 0) > 0) {
+      return true;
+    }
+  }
+
+  const now = new Date();
+  const nowMs = now.getTime();
+
+  // 3. Full ISO date or timestamp check
+  if (f.matchDate && (f.matchDate.includes('T') || f.matchDate.includes('Z'))) {
+    const parsedTime = Date.parse(f.matchDate);
+    if (!isNaN(parsedTime) && parsedTime <= nowMs) {
+      return true;
+    }
+  }
+
+  const cleanDate = f.matchDate ? f.matchDate.substring(0, 10) : '';
+  const todayStr = getRelativeDateStr(0);
+
+  const utcYear = now.getUTCFullYear();
+  const utcMonth = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const utcDay = String(now.getUTCDate()).padStart(2, '0');
+  const utcTodayStr = `${utcYear}-${utcMonth}-${utcDay}`;
+
+  // 4. Past date check (either local or UTC)
+  if (cleanDate && (cleanDate < todayStr && cleanDate < utcTodayStr)) {
+    return true;
+  }
+
+  // 5. Kickoff time check for today
+  if (cleanDate && (cleanDate === todayStr || cleanDate === utcTodayStr) && f.kickOffTime) {
+    const timeMatch = f.kickOffTime.trim().match(/^(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+      let kHours = parseInt(timeMatch[1], 10);
+      const kMinutes = parseInt(timeMatch[2], 10);
+      if (f.kickOffTime.toLowerCase().includes('pm') && kHours < 12) kHours += 12;
+      if (f.kickOffTime.toLowerCase().includes('am') && kHours === 12) kHours = 0;
+
+      const currentLocalMins = now.getHours() * 60 + now.getMinutes();
+      const currentUtcMins = now.getUTCHours() * 60 + now.getUTCMinutes();
+      const kickOffMins = kHours * 60 + kMinutes;
+
+      if (cleanDate === todayStr && kickOffMins <= currentLocalMins) {
+        return true;
+      }
+      if (cleanDate === utcTodayStr && kickOffMins <= currentUtcMins) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export class AccumulatorGenerator {
   /**
    * Generates an accumulator slip based on selected strategy, date range, and constraints
@@ -37,11 +133,11 @@ export class AccumulatorGenerator {
     const next3DaysStr = getRelativeDateStr(2);
     const thisWeekStr = getRelativeDateStr(6);
 
-    // Filter candidate fixtures according to the specified date filter
-    let candidateFixtures = fixtures.filter((f) => {
-      // Exclude matches in the past
-      if (f.matchDate < todayStr) return false;
+    // Strictly filter out any matches that have already started
+    const unstartedFixtures = fixtures.filter((f) => !isMatchStarted(f));
 
+    // Filter candidate fixtures according to the specified date filter
+    let candidateFixtures = unstartedFixtures.filter((f) => {
       if (dateFilter === 'TODAY') {
         return f.matchDate === todayStr;
       } else if (dateFilter === 'TOMORROW') {
@@ -61,10 +157,10 @@ export class AccumulatorGenerator {
     const targetLegCount = params.legCount || (strategy === 'BANKER' ? 3 : 4);
 
     // If matches within filtered date are fewer than required legs,
-    // top up from the nearest upcoming matches (preserving today's matches as top priority)
+    // top up from the nearest upcoming unstarted matches
     if (candidateFixtures.length < targetLegCount) {
-      const additionalFixtures = fixtures
-        .filter((f) => f.matchDate >= todayStr && !candidateFixtures.some((c) => c.id === f.id))
+      const additionalFixtures = unstartedFixtures
+        .filter((f) => !candidateFixtures.some((c) => c.id === f.id))
         .sort((a, b) => a.matchDate.localeCompare(b.matchDate) || a.kickOffTime.localeCompare(b.kickOffTime));
       candidateFixtures = [...candidateFixtures, ...additionalFixtures];
     }
@@ -196,7 +292,7 @@ export class AccumulatorGenerator {
     const legs: AccaLeg[] = [];
 
     for (const f of fixtures) {
-      if (!f.markets || !f.prediction) continue;
+      if (!f.markets || !f.prediction || isMatchStarted(f)) continue;
 
       for (const m of f.markets) {
         if (allowedMarkets && allowedMarkets.length > 0 && !allowedMarkets.includes(m.key)) {
@@ -295,21 +391,29 @@ export class AccumulatorGenerator {
       return this.pickDistinctMatchLegs(candidates, k);
     }
 
-    // Top selections per fixture to keep combinatorial space nimble
-    const simplifiedFixtures = distinctFixtures.map((legs) => {
-      return [...legs].sort((a, b) => b.expectedValue - a.expectedValue).slice(0, 3);
-    });
+    // Prioritize fixtures by highest expected value and probability to keep search fast
+    const prioritizedFixtures = distinctFixtures
+      .map((legs) => [...legs].sort((a, b) => (b.expectedValue + b.probability) - (a.expectedValue + a.probability)))
+      .sort((a, b) => ((b[0]?.expectedValue || 0) + (b[0]?.probability || 0)) - ((a[0]?.expectedValue || 0) + (a[0]?.probability || 0)))
+      .slice(0, 10);
+
+    // Limit to top 2 selections per fixture to avoid exponential explosion
+    const simplifiedFixtures = prioritizedFixtures.map((legs) => legs.slice(0, 2));
 
     let bestCombination: AccaLeg[] = [];
     let bestScore = -Infinity;
+    let evalCount = 0;
+    const MAX_EVALUATIONS = 400;
 
-    // Recursive search
+    // Fast bounded recursive search
     const search = (
       fIdx: number,
       currentPicks: AccaLeg[],
       currentOdds: number,
       currentEV: number
     ) => {
+      if (evalCount++ > MAX_EVALUATIONS) return;
+
       if (currentPicks.length === k) {
         // Distance to target odds penalty
         const oddsDiffRatio = Math.abs(currentOdds - targetOdds) / Math.max(1, targetOdds);
@@ -324,11 +428,9 @@ export class AccumulatorGenerator {
 
       if (fIdx >= simplifiedFixtures.length) return;
       if (simplifiedFixtures.length - fIdx < k - currentPicks.length) return;
+      if (currentOdds > targetOdds * 3) return; // Prune runaway multipliers
 
-      // Try skipping this fixture
-      search(fIdx + 1, currentPicks, currentOdds, currentEV);
-
-      // Try picking each leg from this fixture
+      // Try picking each leg from this fixture first
       for (const leg of simplifiedFixtures[fIdx]) {
         search(
           fIdx + 1,
@@ -337,6 +439,9 @@ export class AccumulatorGenerator {
           currentEV + leg.expectedValue
         );
       }
+
+      // Try skipping this fixture
+      search(fIdx + 1, currentPicks, currentOdds, currentEV);
     };
 
     search(0, [], 1.0, 0);

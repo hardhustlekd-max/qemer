@@ -21,7 +21,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
   return (
     <div
       id={`fixture-card-${fixture.id}`}
-      className="bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 rounded-3xl p-4.5 transition-all shadow-sm hover:shadow-md flex flex-col justify-between group"
+      className="bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 rounded-2xl p-4 transition-all shadow-xs hover:shadow-sm flex flex-col justify-between group"
     >
       <div>
         {/* Top bar: League, Time, Status */}
@@ -37,14 +37,14 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
 
           <div className="flex items-center gap-1.5">
             {bestValue && bestValue.isPositiveEV && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-2xs">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-2xs">
                 <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 +{(bestValue.expectedValue * 100).toFixed(1)}% EV
               </span>
             )}
             {bestValue && bestValue.isBanker && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 shadow-2xs">
-                <Shield className="w-3 h-3 text-violet-600 dark:text-violet-400" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 shadow-2xs">
+                <Shield className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 Banker
               </span>
             )}
@@ -60,7 +60,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
                 {fixture.homeTeam}
               </span>
               {pred?.homeWinProb !== undefined && (
-                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 shadow-2xs shrink-0" title={`${fixture.homeTeam} Win Probability: ${Math.round(pred.homeWinProb * 100)}%`}>
+                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-950 text-emerald-600 dark:text-emerald-400 shadow-xs shrink-0" title={`${fixture.homeTeam} Win Probability: ${Math.round(pred.homeWinProb * 100)}%`}>
                   {Math.round(pred.homeWinProb * 100)}%
                 </span>
               )}
@@ -78,7 +78,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
             <button
               onClick={() => onSelectDetail(fixture)}
               className="mt-0.5 text-[10px] text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-0.5 transition-colors cursor-pointer"
-              title="View Poisson probability matrix & team radar"
+              title="View Poisson probability matrix"
             >
               <Info className="w-3 h-3" />
               <span>Grid</span>
@@ -89,7 +89,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           <div className="col-span-5 flex flex-col items-end text-right">
             <div className="flex items-center justify-end gap-1.5 min-w-0">
               {pred?.awayWinProb !== undefined && (
-                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.2 rounded-md bg-cyan-50 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 shadow-2xs shrink-0" title={`${fixture.awayTeam} Win Probability: ${Math.round(pred.awayWinProb * 100)}%`}>
+                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-950 text-cyan-600 dark:text-cyan-400 shadow-xs shrink-0" title={`${fixture.awayTeam} Win Probability: ${Math.round(pred.awayWinProb * 100)}%`}>
                   {Math.round(pred.awayWinProb * 100)}%
                 </span>
               )}
@@ -113,7 +113,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
               <span className="text-amber-600 dark:text-amber-400 font-bold">{(pred.drawProb * 100).toFixed(0)}%</span>
               <span className="text-cyan-600 dark:text-cyan-400 font-bold">{(pred.awayWinProb * 100).toFixed(0)}%</span>
             </div>
-            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full flex overflow-hidden">
+            <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full flex overflow-hidden">
               <div
                 style={{ width: `${pred.homeWinProb * 100}%` }}
                 className="bg-emerald-500 transition-all duration-500"
@@ -135,12 +135,12 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
 
         {/* Best Value Pick Recommendation */}
         {bestValue && (
-          <div className="mt-2.5 mb-3 p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-xs shadow-2xs">
+          <div className="mt-2.5 mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-xs shadow-xs">
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-[10px] font-bold uppercase text-slate-400">Top Value Pick:</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">{bestValue.name}</span>
             </div>
-            <span className="font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 px-2.5 py-0.5 rounded-lg text-[11px] shadow-xs">
+            <span className="font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-0.5 rounded-lg text-[11px] shadow-xs">
               @{bestValue.odds.toFixed(2)}
             </span>
           </div>
@@ -154,7 +154,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           <button
             type="button"
             onClick={() => onSelectDetail(fixture)}
-            className={`p-2 rounded-2xl text-center transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${
+            className={`p-2 rounded-xl text-center transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${
               homeWinMarket.isPositiveEV
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-slate-900 dark:text-slate-200'
                 : 'bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-300'
@@ -175,7 +175,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           <button
             type="button"
             onClick={() => onSelectDetail(fixture)}
-            className={`p-2 rounded-2xl text-center transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${
+            className={`p-2 rounded-xl text-center transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${
               drawMarket.isPositiveEV
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-slate-900 dark:text-slate-200'
                 : 'bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-300'
@@ -196,7 +196,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           <button
             type="button"
             onClick={() => onSelectDetail(fixture)}
-            className={`p-2 rounded-2xl text-center transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${
+            className={`p-2 rounded-xl text-center transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${
               awayWinMarket.isPositiveEV
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-slate-900 dark:text-slate-200'
                 : 'bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-300'

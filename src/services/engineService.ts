@@ -8,7 +8,7 @@ import {
   TrendingTipsData,
 } from '../core/types.js';
 import { PoissonEngine } from '../core/poisson.js';
-import { AccumulatorGenerator, AccaGenerationParams } from '../core/accumulator.js';
+import { AccumulatorGenerator, AccaGenerationParams, isMatchStarted } from '../core/accumulator.js';
 import { FootballDataCSVParser } from '../core/csvParser.js';
 import { getRelativeDateStr } from '../core/seedData.js';
 import { LiveScore } from '../providers/types.js';
@@ -322,6 +322,86 @@ export class EngineService {
     }
 
     return [];
+  }
+
+  /**
+   * Fetches Prebuilt Accumulator Slips generated entirely on the server side
+   */
+  public static async getPrebuiltAccumulators(
+    dateScope = 'TODAY',
+    stake = 10,
+    fixtures?: Fixture[]
+  ): Promise<Record<string, AccumulatorSlip>> {
+    const serverData = await this.safeJsonFetch('/api/accumulator/prebuilt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dateScope, stake, fixtures }),
+    });
+
+    if (serverData && serverData.success && serverData.slips) {
+      return serverData.slips;
+    }
+
+    // Fallback if running purely offline - strictly exclude started matches
+    const rawFixtures = fixtures && fixtures.length > 0 ? fixtures : this.calculateLocalFixtures('ALL');
+    const fixturesToUse = rawFixtures.filter((f) => !isMatchStarted(f));
+    const banker = AccumulatorGenerator.generateSlip(
+      fixturesToUse,
+      {
+        strategy: 'BANKER',
+        legCount: 3,
+        minProbability: 0.68,
+        stake,
+        dateFilter: dateScope,
+        allowedMarkets: ['HOME_WIN', 'AWAY_WIN', 'DOUBLE_CHANCE_1X', 'DOUBLE_CHANCE_X2', 'OVER_15' as any],
+      },
+      localSettings
+    );
+    const value = AccumulatorGenerator.generateSlip(
+      fixturesToUse,
+      {
+        strategy: 'VALUE_HUNTER',
+        legCount: 4,
+        stake,
+        dateFilter: dateScope,
+        allowedMarkets: ['HOME_WIN', 'AWAY_WIN', 'OVER_25', 'BTTS_YES', 'DRAW'],
+      },
+      localSettings
+    );
+    const goals = AccumulatorGenerator.generateSlip(
+      fixturesToUse,
+      {
+        strategy: 'CUSTOM',
+        legCount: 4,
+        targetOdds: 6.0,
+        stake,
+        dateFilter: dateScope,
+        allowedMarkets: ['OVER_25', 'BTTS_YES'],
+      },
+      localSettings
+    );
+    goals.name = dateScope === 'TODAY' ? "Today's High Goals Combo" : 'High Goals & BTTS Acca';
+
+    const mega = AccumulatorGenerator.generateSlip(
+      fixturesToUse,
+      {
+        strategy: 'CUSTOM',
+        legCount: 6,
+        targetOdds: 20.0,
+        stake,
+        dateFilter: dateScope,
+        allowedMarkets: ['HOME_WIN', 'AWAY_WIN', 'OVER_25', 'BTTS_YES', 'DOUBLE_CHANCE_1X'],
+      },
+      localSettings
+    );
+    mega.name = dateScope === 'TODAY' ? "Today's 6-Fold Mega Acca" : 'Weekend Mega Accumulator';
+
+    return {
+      BANKER: banker,
+      VALUE_HUNTER: value,
+      HIGH_GOALS: goals,
+      MEGA_COMBO: mega,
+    };
   }
 
   /**

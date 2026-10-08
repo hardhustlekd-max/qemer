@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from './components/Header.js';
 import { LiveScoresTicker } from './components/LiveScoresTicker.js';
+import { MainTabBar } from './components/MainTabBar.js';
 import { FixturesList } from './components/FixturesList.js';
 import { PrebuiltAccumulators } from './components/PrebuiltAccumulators.js';
 import { TipsSection } from './components/TipsSection.js';
@@ -17,7 +18,11 @@ import { EngineService } from './services/engineService.js';
 import { Sparkles } from 'lucide-react';
 
 export default function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+    return 'light';
+  });
   const [activeTab, setActiveTab] = useState<'FIXTURES' | 'ACCAS' | 'TIPS'>('FIXTURES');
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [isLoadingFixtures, setIsLoadingFixtures] = useState<boolean>(true);
@@ -51,6 +56,7 @@ export default function App() {
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
     if (nextTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -197,8 +203,6 @@ export default function App() {
         settings={settings}
         providers={providers}
         stats={stats}
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenSeedModal={() => setIsSettingsOpen(true)}
         onSelectAccaCategory={() => setActiveTab('ACCAS')}
@@ -210,6 +214,9 @@ export default function App() {
 
       {/* Live In-Play Scores Ticker */}
       <LiveScoresTicker liveScores={liveScores} />
+
+      {/* Main Tab Bar Placed Under Live Matches Bar */}
+      <MainTabBar activeTab={activeTab} onSelectTab={setActiveTab} />
 
       {/* Main Content Dashboard */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-5 space-y-5">

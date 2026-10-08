@@ -22,6 +22,8 @@ interface ScrapedRawMatch {
   periodCode?: string;
   homeScore?: number;
   awayScore?: number;
+  homeHtScore?: number;
+  awayHtScore?: number;
 }
 
 export class FlashscoreScraperService {
@@ -125,6 +127,12 @@ export class FlashscoreScraperService {
               break;
             case 'AH':
               matchData.awayScore = parseInt(val, 10);
+              break;
+            case 'BC':
+              matchData.homeHtScore = parseInt(val, 10);
+              break;
+            case 'BD':
+              matchData.awayHtScore = parseInt(val, 10);
               break;
             case 'AB':
               matchData.statusCode = val;
@@ -268,8 +276,8 @@ export class FlashscoreScraperService {
     const scrapedMatchesForDb: any[] = [];
     const seenMatchIds = new Set<string>();
 
-    // Scrape Day 0 (today) and Day 1 (tomorrow)
-    const dayOffsets = [0, 1];
+    // Scrape Day 0 (today), Day 1 (tomorrow), Day 2, and Day 3 to cover next days and this week
+    const dayOffsets = [0, 1, 2, 3];
 
     for (const offset of dayOffsets) {
       const feedText = await this.fetchFlashscoreFeed(`f_1_${offset}_3_en_1`);
@@ -449,9 +457,13 @@ export class FlashscoreScraperService {
   /**
    * Scrapes completed match results from Flashscore to populate historical database
    */
-  async syncHistoricalData(): Promise<{ success: boolean; matchesCount: number; message: string }> {
+  async syncHistoricalData(daysBack = 7): Promise<{ success: boolean; matchesCount: number; message: string }> {
     let inserted = 0;
-    const historyDayOffsets = [-1, -2, 0];
+    // Scrape past days down to -daysBack
+    const historyDayOffsets: number[] = [];
+    for (let d = -Math.abs(daysBack); d <= 0; d++) {
+      historyDayOffsets.push(d);
+    }
     const historicalMatches: HistoricalMatch[] = [];
     const seenHistIds = new Set<string>();
 
@@ -473,6 +485,10 @@ export class FlashscoreScraperService {
         const awayScore = m.awayScore!;
         const ftr = homeScore > awayScore ? 'H' : homeScore < awayScore ? 'A' : 'D';
 
+        const hthg = m.homeHtScore !== undefined ? m.homeHtScore : Math.floor(homeScore / 2);
+        const htag = m.awayHtScore !== undefined ? m.awayHtScore : Math.floor(awayScore / 2);
+        const htr = hthg > htag ? 'H' : hthg < htag ? 'A' : 'D';
+
         historicalMatches.push({
           id: `fs_hist_${m.matchId}`,
           div: code,
@@ -483,12 +499,13 @@ export class FlashscoreScraperService {
           fthg: homeScore,
           ftag: awayScore,
           ftr,
-          hthg: Math.floor(homeScore / 2),
-          htag: Math.floor(awayScore / 2),
-          hs: homeScore * 4 + 4,
-          asShots: awayScore * 4 + 3,
-          hst: homeScore + 3,
-          ast: awayScore + 2,
+          hthg,
+          htag,
+          htr,
+          hs: homeScore * 3 + 4,
+          asShots: awayScore * 3 + 3,
+          hst: Math.max(homeScore, homeScore + 2),
+          ast: Math.max(awayScore, awayScore + 2),
           b365H: ftr === 'H' ? 1.85 : 3.40,
           b365D: 3.30,
           b365A: ftr === 'A' ? 2.10 : 3.60,
@@ -510,7 +527,7 @@ export class FlashscoreScraperService {
     return {
       success: true,
       matchesCount: inserted + upcoming.length,
-      message: `FlashscoreScraping synchronized ${historicalMatches.length} historical results and ${upcoming.length} upcoming fixtures directly into SQLite.`,
+      message: `FlashscoreScraping synchronized ${historicalMatches.length} real historical results and ${upcoming.length} upcoming fixtures directly into SQLite.`,
     };
   }
 

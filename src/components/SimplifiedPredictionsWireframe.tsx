@@ -88,17 +88,17 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
   };
 
   return (
-    <div className="w-full max-w-full bg-white dark:bg-[#0B0F17] rounded-3xl shadow-sm overflow-hidden text-slate-900 dark:text-slate-100 font-sans transition-all space-y-3 p-2 sm:p-3">
+    <div className="w-full max-w-full bg-white dark:bg-[#0B0F17] rounded-3xl shadow-xs overflow-hidden text-slate-900 dark:text-slate-100 font-sans transition-all space-y-3 p-2 sm:p-3">
       {groupedByLeague.length === 0 ? (
         <div className="p-8 text-center text-slate-500">No matches found.</div>
       ) : (
         groupedByLeague.map(([leagueName, leagueFixtures]) => (
-          <div key={leagueName} className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs">
+          <div key={leagueName} className="rounded-2xl overflow-hidden shadow-xs bg-slate-50 dark:bg-slate-900/60">
             {/* Unified App-Matching League Header */}
-            <div className="bg-slate-50 dark:bg-slate-900/80 px-3.5 py-2.5 flex items-center justify-between font-bold text-xs border-b border-slate-100 dark:border-slate-800/60">
+            <div className="bg-slate-50 dark:bg-slate-900/60 px-3.5 py-2.5 flex items-center justify-between font-bold text-xs border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2 truncate text-slate-900 dark:text-white">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="truncate tracking-tight">{leagueName}</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="truncate tracking-tight font-extrabold">{leagueName}</span>
               </div>
               <div className="flex items-center gap-3 sm:gap-5 font-mono text-[11px] tracking-wider text-slate-500 dark:text-slate-400 pr-2">
                 <span>TIP</span>
@@ -109,7 +109,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
             </div>
 
             {/* League Matches Table Rows */}
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/50 bg-white dark:bg-[#0B0F17]">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/40 bg-white dark:bg-[#0B0F17]">
               {leagueFixtures.map((fixture) => {
                 const market = getSelectedMarket(fixture);
                 const tipLabel = getTipLabel(fixture, market);
@@ -131,7 +131,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
                   <div
                     key={fixture.id}
                     onClick={() => onSelectDetail(fixture)}
-                    className="grid grid-cols-12 items-center px-3 sm:px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all cursor-pointer gap-2"
+                    className="grid grid-cols-12 items-center px-3 sm:px-4 py-2.5 hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-all cursor-pointer gap-2"
                   >
                     {/* Time, Date & Score */}
                     <div className="col-span-2 flex flex-col justify-center font-mono text-xs text-slate-500 dark:text-slate-400">
@@ -156,7 +156,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
 
                     {/* TIP Column */}
                     <div className="col-span-2 flex items-center justify-center font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                      <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800">
+                      <span className="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-2xs">
                         {tipLabel}
                       </span>
                     </div>
@@ -164,20 +164,20 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
                     {/* 1, X, 2 Percentage Probability Boxes & Chart Icon */}
                     <div className="col-span-3 flex items-center justify-end gap-1 font-mono text-xs font-bold">
                       {/* Home 1 */}
-                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded text-[11px] ${
-                        homeProb >= 50 ? 'bg-emerald-500 text-white' : homeProb >= 35 ? 'bg-emerald-200 text-emerald-900' : 'bg-rose-200 text-rose-900'
+                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded-lg text-[11px] shadow-2xs ${
+                        homeProb >= 50 ? 'bg-emerald-600 text-white' : homeProb >= 35 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}>
                         {homeProb}
                       </span>
                       {/* Draw X */}
-                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded text-[11px] ${
-                        drawProb >= 35 ? 'bg-amber-400 text-slate-950' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded-lg text-[11px] shadow-2xs ${
+                        drawProb >= 35 ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}>
                         {drawProb}
                       </span>
                       {/* Away 2 */}
-                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded text-[11px] ${
-                        awayProb >= 50 ? 'bg-emerald-500 text-white' : awayProb >= 35 ? 'bg-emerald-200 text-emerald-900' : 'bg-rose-200 text-rose-900'
+                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded-lg text-[11px] shadow-2xs ${
+                        awayProb >= 50 ? 'bg-emerald-600 text-white' : awayProb >= 35 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}>
                         {awayProb}
                       </span>
@@ -193,7 +193,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
 
       {/* Table Pagination Bar */}
       {fixtures.length > 0 && (
-        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/70 flex flex-wrap items-center justify-between gap-2 text-xs rounded-2xl">
+        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/60 flex flex-wrap items-center justify-between gap-2 text-xs rounded-2xl shadow-xs">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <span className="text-slate-500 dark:text-slate-400 font-medium text-xs whitespace-nowrap">
               Showing <span className="font-bold text-slate-900 dark:text-white">{startItemIndex}–{endItemIndex}</span> of <span className="font-bold text-slate-900 dark:text-white">{fixtures.length}</span> matches
@@ -207,7 +207,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-white dark:bg-slate-900 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none shadow-xs"
+                className="bg-white dark:bg-slate-950 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none shadow-xs"
               >
                 <option value={5} className="bg-white dark:bg-slate-900">5 per page</option>
                 <option value={10} className="bg-white dark:bg-slate-900">10 per page</option>

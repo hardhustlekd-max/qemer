@@ -205,6 +205,20 @@ export class FootballDB {
       );
 
       CREATE INDEX IF NOT EXISTS idx_flashscore_matches_date ON flashscore_scraped_matches(match_date);
+
+      CREATE TABLE IF NOT EXISTS prebuilt_accumulators_cache (
+        id TEXT PRIMARY KEY,
+        category TEXT NOT NULL,
+        date_scope TEXT NOT NULL,
+        combined_odds REAL NOT NULL,
+        combined_prob REAL NOT NULL,
+        risk_level TEXT NOT NULL,
+        unstarted_only INTEGER DEFAULT 1,
+        slip_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_prebuilt_cache_scope ON prebuilt_accumulators_cache(date_scope);
     `);
 
     // Insert default settings if not exists
