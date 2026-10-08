@@ -11,7 +11,7 @@ settingsRouter.get('/', (req, res) => {
     res.json({
       success: true,
       settings: settings || {
-        activeProvider: 'FOOTBALL_DATA_CO_UK',
+        activeProvider: 'FLASHSCORE',
         rollingMatchWindow: 15,
         minEVThreshold: 1.10,
         safeWinThreshold: 0.72,
@@ -29,7 +29,7 @@ settingsRouter.put('/', (req, res) => {
   try {
     const updated: Partial<EngineSettings> = req.body;
     const current = db.getSettings() || {
-      activeProvider: 'FOOTBALL_DATA_CO_UK',
+      activeProvider: 'FLASHSCORE',
       rollingMatchWindow: 15,
       minEVThreshold: 1.10,
       safeWinThreshold: 0.72,

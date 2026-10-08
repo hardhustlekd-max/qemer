@@ -18,10 +18,21 @@ export class FootballDataCoUkProvider implements APIProvider {
 
   async getUpcomingFixtures(date?: string): Promise<Fixture[]> {
     const existing = db.getUpcomingFixtures(undefined, date);
-    if (existing.length > 0) {
+    const hasEspnFixtures = existing.some((f) => f.providerId === 'espn');
+    if (hasEspnFixtures && existing.length >= 10) {
       return existing;
     }
-    return fetchRealUpcomingFixtures();
+
+    try {
+      const real = await fetchRealUpcomingFixtures();
+      if (real.length > 0) {
+        return date ? real.filter((f) => f.matchDate === date) : real;
+      }
+    } catch {
+      // Fallback to existing database records
+    }
+
+    return existing;
   }
 
   async getLiveOdds(fixtureId: string): Promise<LiveOddsUpdate> {

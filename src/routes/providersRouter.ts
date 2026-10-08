@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { providerManager } from '../providers/providerManager.js';
 import { db } from '../core/db.js';
 import { EngineSettings } from '../core/types.js';
+import { flashscoreScraperService } from '../services/flashscoreScraperService.js';
 
 export const providersRouter = Router();
 
@@ -58,5 +59,53 @@ providersRouter.get('/live-scores', async (req, res) => {
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Failed to get live scores' });
+  }
+});
+
+// Flashscore Scraper specific endpoints
+providersRouter.get('/flashscore/scrape', async (req, res) => {
+  try {
+    const date = req.query.date as string | undefined;
+    const fixtures = await flashscoreScraperService.getUpcomingFixtures(date);
+    res.json({
+      success: true,
+      count: fixtures.length,
+      fixtures,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to scrape Flashscore' });
+  }
+});
+
+providersRouter.get('/flashscore/matches', (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
+    const matches = db.getFlashscoreScrapedMatches(limit);
+    res.json({
+      success: true,
+      count: matches.length,
+      matches,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to retrieve Flashscore matches' });
+  }
+});
+
+providersRouter.get('/flashscore/export', (req, res) => {
+  try {
+    const format = (req.query.format as 'json' | 'json-array' | 'csv') || 'json';
+    const matches = db.getFlashscoreScrapedMatches(500);
+    const exported = flashscoreScraperService.exportData(matches, format);
+
+    if (format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="flashscore_scraped.csv"');
+      return res.send(exported);
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.send(exported);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to export Flashscore data' });
   }
 });

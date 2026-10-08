@@ -68,17 +68,17 @@ export default function App() {
   }, [theme]);
 
   // Fetch initial fixtures and settings
-  const fetchFixtures = useCallback(async (league = selectedLeague) => {
+  const fetchFixtures = useCallback(async () => {
     try {
       setIsLoadingFixtures(true);
-      const data = await EngineService.getFixtures(league);
+      const data = await EngineService.getFixtures('ALL');
       setFixtures(data);
     } catch (e) {
       console.error('Failed to fetch fixtures:', e);
     } finally {
       setIsLoadingFixtures(false);
     }
-  }, [selectedLeague]);
+  }, []);
 
   const fetchTips = useCallback(async (forceRefresh = false) => {
     try {
@@ -141,7 +141,6 @@ export default function App() {
 
   const handleSelectLeague = (league: string) => {
     setSelectedLeague(league);
-    fetchFixtures(league);
   };
 
   const handleProviderChange = async (providerId: EngineSettings['activeProvider']) => {

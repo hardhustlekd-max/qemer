@@ -155,7 +155,7 @@ export interface AccumulatorSlip {
 }
 
 export interface EngineSettings {
-  activeProvider: 'FOOTBALL_DATA_CO_UK' | 'BIG_BALLS_DATA' | 'FOOTBALL_DATA_ORG' | 'API_FOOTBALL';
+  activeProvider: 'FLASHSCORE' | 'ESPN' | 'FOOTBALL_DATA_CO_UK' | 'BIG_BALLS_DATA' | 'FOOTBALL_DATA_ORG' | 'API_FOOTBALL';
   rollingMatchWindow: number; // e.g. 10, 15, 20
   minEVThreshold: number; // e.g. 1.10 (10% EV)
   safeWinThreshold: number; // e.g. 0.70 (70%)
@@ -164,10 +164,40 @@ export interface EngineSettings {
   autoSyncDaily: boolean;
 }
 
+export interface FlashscoreScrapedMatch {
+  matchId: string;
+  stage?: string;
+  date: string;
+  status: string;
+  home: {
+    name: string;
+    image?: string;
+  };
+  away: {
+    name: string;
+    image?: string;
+  };
+  result?: {
+    home?: string;
+    away?: string;
+    regulationTime?: string;
+    penalties?: string;
+  };
+  information?: {
+    category: string;
+    value: string;
+  }[];
+  statistics?: {
+    category: string;
+    homeValue?: string;
+    awayValue?: string;
+  }[];
+}
+
 export interface ProviderStatus {
   id: string;
   name: string;
-  type: 'CSV' | 'REST' | 'HYBRID';
+  type: 'CSV' | 'REST' | 'HYBRID' | 'SCRAPER';
   status: 'ONLINE' | 'STANDBY' | 'DEGRADED';
   latencyMs: number;
   description: string;

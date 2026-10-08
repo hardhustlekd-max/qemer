@@ -53,36 +53,82 @@ interface ESPNEvent {
 }
 
 const LEAGUE_MAPPINGS: Record<string, { code: LeagueCode; name: string }> = {
-  'eng.1': { code: 'E0', name: 'Premier League' },
-  'esp.1': { code: 'SP1', name: 'La Liga' },
-  'ger.1': { code: 'D1', name: 'Bundesliga' },
-  'ita.1': { code: 'I1', name: 'Serie A' },
-  'fra.1': { code: 'F1', name: 'Ligue 1' },
+  // England
+  'eng.1': { code: 'E0', name: 'English Premier League' },
+  'eng.2': { code: 'E1', name: 'English League Championship' },
+  'eng.3': { code: 'E2', name: 'English League One' },
+  'eng.4': { code: 'E3', name: 'English League Two' },
+  'eng.fa': { code: 'EFA', name: 'English FA Cup' },
+  'eng.league_cup': { code: 'ELC', name: 'English Carabao Cup' },
+
+  // Spain
+  'esp.1': { code: 'SP1', name: 'Spanish LALIGA' },
+  'esp.2': { code: 'SP2', name: 'Spanish LALIGA 2' },
+  'esp.copa_del_rey': { code: 'SPCDR', name: 'Spanish Copa del Rey' },
+
+  // Germany
+  'ger.1': { code: 'D1', name: 'German Bundesliga' },
+  'ger.2': { code: 'D2', name: 'German 2. Bundesliga' },
+  'ger.dfb_pokal': { code: 'DPOK', name: 'German DFB-Pokal' },
+
+  // Italy
+  'ita.1': { code: 'I1', name: 'Italian Serie A' },
+  'ita.2': { code: 'I2', name: 'Italian Serie B' },
+  'ita.coppa_italia': { code: 'ICIT', name: 'Italian Coppa Italia' },
+
+  // France
+  'fra.1': { code: 'F1', name: 'French Ligue 1' },
+  'fra.2': { code: 'F2', name: 'French Ligue 2' },
+  'fra.coupe_de_france': { code: 'FCDF', name: 'French Coupe de France' },
+
+  // European Tournaments
   'uefa.champions': { code: 'UCL', name: 'UEFA Champions League' },
   'uefa.europa': { code: 'UEL', name: 'UEFA Europa League' },
-  'ned.1': { code: 'N1', name: 'Eredivisie' },
-  'por.1': { code: 'P1', name: 'Primeira Liga' },
-  'bra.1': { code: 'BRA', name: 'Brasileirão Série A' },
+  'uefa.europa.conf': { code: 'UECL', name: 'UEFA Conference League' },
+  'uefa.nations': { code: 'UNL', name: 'UEFA Nations League' },
+
+  // European Domestic Leagues
+  'ned.1': { code: 'N1', name: 'Dutch Eredivisie' },
+  'por.1': { code: 'P1', name: 'Portuguese Primeira Liga' },
+  'bel.1': { code: 'BE1', name: 'Belgian Pro League' },
+  'sco.1': { code: 'SC1', name: 'Scottish Premiership' },
+  'aut.1': { code: 'A1', name: 'Austrian Bundesliga' },
+  'sui.1': { code: 'SUI1', name: 'Swiss Super League' },
+  'tur.1': { code: 'TUR1', name: 'Turkish Süper Lig' },
+  'gre.1': { code: 'GRE1', name: 'Greek Super League' },
+  'den.1': { code: 'DEN1', name: 'Danish Superliga' },
+  'nor.1': { code: 'NOR1', name: 'Norwegian Eliteserien' },
+  'swe.1': { code: 'SE1', name: 'Swedish Allsvenskan' },
+  'pol.1': { code: 'POL1', name: 'Polish Ekstraklasa' },
+
+  // South America
+  'bra.1': { code: 'BRA', name: 'Campeonato Brasileiro Série A' },
+  'bra.2': { code: 'BRB', name: 'Campeonato Brasileiro Série B' },
+  'bra.copa_do_brasil': { code: 'BRC', name: 'Copa do Brasil' },
+  'arg.1': { code: 'ARG1', name: 'Argentine Primera División' },
+  'col.1': { code: 'COL1', name: 'Categoría Primera A (Colombia)' },
+  'mex.1': { code: 'MEX1', name: 'Liga MX (Mexico)' },
+  'chi.1': { code: 'CHI1', name: 'Chilean Primera División' },
+  'per.1': { code: 'PER1', name: 'Peruvian Liga 1' },
+  'ecu.1': { code: 'ECU1', name: 'LigaPro Ecuador' },
+  'uru.1': { code: 'URU1', name: 'Uruguayan Primera División' },
+  'par.1': { code: 'PAR1', name: 'Paraguayan Primera División' },
+
+  // North America & World
   'usa.1': { code: 'MLS', name: 'Major League Soccer' },
+  'usa.usl.1': { code: 'USL', name: 'USL Championship' },
+  'usa.open': { code: 'USOC', name: 'U.S. Open Cup' },
   'ksa.1': { code: 'SPL', name: 'Saudi Pro League' },
   'jpn.1': { code: 'JPL', name: 'J1 League (Japan)' },
+  'chn.1': { code: 'CHN1', name: 'Chinese Super League' },
+  'aus.1': { code: 'AUS1', name: 'Australian A-League Men' },
+  'ind.1': { code: 'IND1', name: 'Indian Super League' },
+  'fifa.worldq.conmebol': { code: 'WCQU_CON', name: 'FIFA World Cup Qualifying - CONMEBOL' },
+  'fifa.worldq.uefa': { code: 'WCQU_UEFA', name: 'FIFA World Cup Qualifying - UEFA' },
+  'fifa.friendly': { code: 'FRIENDLY', name: 'International Friendly' },
 };
 
-const leaguesToFetch = [
-  'eng.1',
-  'esp.1',
-  'ger.1',
-  'ita.1',
-  'fra.1',
-  'uefa.champions',
-  'uefa.europa',
-  'ned.1',
-  'por.1',
-  'bra.1',
-  'usa.1',
-  'ksa.1',
-  'jpn.1',
-];
+const leaguesToFetch = Object.keys(LEAGUE_MAPPINGS);
 
 let lastFetchTime = 0;
 const CACHE_WINDOW_MS = 60 * 1000; // 1 minute
@@ -90,21 +136,25 @@ const CACHE_WINDOW_MS = 60 * 1000; // 1 minute
 /**
  * Dynamically fetches live upcoming real fixtures from global soccer data feeds with database persistence
  */
-export async function fetchRealUpcomingFixtures(): Promise<Fixture[]> {
+export async function fetchRealUpcomingFixtures(date?: string): Promise<Fixture[]> {
   const now = Date.now();
-  const existing = db.getUpcomingFixtures();
+  const existing = db.getUpcomingFixtures(undefined, date);
 
-  // If we already have fresh fixtures in SQLite database within cache window, return from DB
-  if (existing.length >= 3 && now - lastFetchTime < CACHE_WINDOW_MS) {
+  // If we already have fresh ESPN fixtures in SQLite database within cache window, return from DB
+  const hasEspnFixtures = existing.some((f) => f.providerId === 'espn');
+  if (hasEspnFixtures && existing.length >= 50 && now - lastFetchTime < CACHE_WINDOW_MS) {
     return existing;
   }
 
   const fetchedFixtures: Fixture[] = [];
   const seenFixtureIds = new Set<string>();
+  const dateParam = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date.replace(/-/g, '') : '';
 
   try {
     const fetchPromises = leaguesToFetch.map(async (leagueKey) => {
-      const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueKey}/scoreboard`;
+      const url = dateParam
+        ? `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueKey}/scoreboard?dates=${dateParam}`
+        : `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueKey}/scoreboard`;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 3500);
 
@@ -142,8 +192,13 @@ export async function fetchRealUpcomingFixtures(): Promise<Fixture[]> {
 
           const eventDateStr = comp.date || event.date || new Date().toISOString();
           const eventDate = new Date(eventDateStr);
-          const matchDate = eventDate.toISOString().split('T')[0];
-          const kickOffTime = eventDate.toTimeString().slice(0, 5) || '19:00';
+          const year = eventDate.getFullYear();
+          const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+          const day = String(eventDate.getDate()).padStart(2, '0');
+          const matchDate = `${year}-${month}-${day}`;
+          const hours = String(eventDate.getHours()).padStart(2, '0');
+          const minutes = String(eventDate.getMinutes()).padStart(2, '0');
+          const kickOffTime = `${hours}:${minutes}` !== '00:00' ? `${hours}:${minutes}` : '19:00';
 
           const rawOdds = comp.odds?.[0];
           let homeOdds = rawOdds?.moneyline?.home?.decimal || 2.10;

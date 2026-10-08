@@ -18,7 +18,7 @@ import { getInitialHistoricalMatches, getInitialUpcomingFixtures } from '../core
 
 // Default In-Memory Engine State for Universal & Client-Side execution (Vercel, Static, etc.)
 let localSettings: EngineSettings = {
-  activeProvider: 'FOOTBALL_DATA_CO_UK',
+  activeProvider: 'FLASHSCORE',
   rollingMatchWindow: 15,
   minEVThreshold: 1.10,
   safeWinThreshold: 0.72,
@@ -31,6 +31,24 @@ let localHistoricalMatches: HistoricalMatch[] = getInitialHistoricalMatches();
 let localUpcomingFixtures: Fixture[] = getInitialUpcomingFixtures();
 
 const PROVIDER_METADATA: ProviderStatus[] = [
+  {
+    id: 'FLASHSCORE',
+    name: 'Flashscore Live Scraper',
+    type: 'SCRAPER',
+    status: 'ONLINE',
+    description: 'Direct FlashscoreScraping engine extracting live match results, in-play statistics, worldwide fixture lineups, and odds directly from Flashscore.',
+    latencyMs: 14,
+    features: ['Direct Flashscore Feed Scraper', 'Real-Time In-Play Scores', '50+ Worldwide Leagues & Cups', 'Live Statistics & Results', 'Instant SQLite Sync'],
+  },
+  {
+    id: 'ESPN',
+    name: 'ESPN Global Sports Feed',
+    type: 'REST',
+    status: 'ONLINE',
+    description: 'Direct real-time global soccer scoreboard, schedules and in-play events feed with live match minutes and moneyline odds.',
+    latencyMs: 12,
+    features: ['Real-Time Live Scoreboard', 'Official Match Schedules', 'Worldwide League Coverage', 'In-Play Live Events'],
+  },
   {
     id: 'FOOTBALL_DATA_CO_UK',
     name: 'Football-Data.co.uk',
@@ -111,7 +129,12 @@ export class EngineService {
     }
 
     if (localUpcomingFixtures.length === 0) {
-      localUpcomingFixtures = await fetchRealUpcomingFixtures();
+      try {
+        const { flashscoreScraperService } = await import('./flashscoreScraperService.js');
+        localUpcomingFixtures = await flashscoreScraperService.getUpcomingFixtures();
+      } catch {
+        localUpcomingFixtures = await fetchRealUpcomingFixtures();
+      }
     }
 
     // Client-side fallback calculation with pure Poisson mathematical engine
@@ -132,9 +155,42 @@ export class EngineService {
     const next3DaysStr = getRelativeDateStr(2);
     const thisWeekStr = getRelativeDateStr(6);
 
-    let fixturesToProcess = localUpcomingFixtures
+    // 1. Process prediction and markets for ALL upcoming matches first
+    const allEnriched = localUpcomingFixtures
       .filter((f) => f.matchDate >= todayStr)
-      .map((f) => ({ ...f }));
+      .map((f) => {
+        const leagueMatches = localHistoricalMatches.filter(
+          (m) => m.div.toUpperCase() === f.league.toUpperCase()
+        );
+        const historicalContext = leagueMatches.length >= 10 ? leagueMatches : localHistoricalMatches;
+
+        const { prediction, homeStats, awayStats } = PoissonEngine.predictMatch(
+          f.homeTeam,
+          f.awayTeam,
+          historicalContext,
+          localSettings
+        );
+
+        const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(
+          prediction,
+          f.odds,
+          localSettings,
+          f.homeTeam,
+          f.awayTeam
+        );
+
+        return {
+          ...f,
+          prediction,
+          markets,
+          bestValueMarket,
+          homeStats,
+          awayStats,
+        };
+      });
+
+    // 2. Filter enriched predictions based on parameters
+    let fixturesToProcess = allEnriched;
 
     if (leagueFilter && leagueFilter !== 'ALL') {
       fixturesToProcess = fixturesToProcess.filter(
@@ -155,37 +211,7 @@ export class EngineService {
       if (customEndDate) fixturesToProcess = fixturesToProcess.filter((f) => f.matchDate <= customEndDate);
     }
 
-    return fixturesToProcess.map((f) => {
-      // Find league matches
-      const leagueMatches = localHistoricalMatches.filter(
-        (m) => m.div.toUpperCase() === f.league.toUpperCase()
-      );
-      const historicalContext = leagueMatches.length >= 10 ? leagueMatches : localHistoricalMatches;
-
-      const { prediction, homeStats, awayStats } = PoissonEngine.predictMatch(
-        f.homeTeam,
-        f.awayTeam,
-        historicalContext,
-        localSettings
-      );
-
-      const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(
-        prediction,
-        f.odds,
-        localSettings,
-        f.homeTeam,
-        f.awayTeam
-      );
-
-      return {
-        ...f,
-        prediction,
-        markets,
-        bestValueMarket,
-        homeStats,
-        awayStats,
-      };
-    });
+    return fixturesToProcess;
   }
 
   /**

@@ -17,7 +17,7 @@ fixturesRouter.get('/', async (req, res) => {
 
     const provider = providerManager.getActiveProvider();
     const settings: EngineSettings = db.getSettings() || {
-      activeProvider: 'FOOTBALL_DATA_CO_UK',
+      activeProvider: 'FLASHSCORE',
       rollingMatchWindow: 15,
       minEVThreshold: 1.10,
       safeWinThreshold: 0.72,
@@ -34,33 +34,18 @@ fixturesRouter.get('/', async (req, res) => {
     const next3DaysStr = getRelativeDateStr(2);
     const thisWeekStr = getRelativeDateStr(6);
 
-    // Filter out past fixtures
-    fixtures = fixtures.filter((f) => f.matchDate >= todayStr);
-
-    if (leagueFilter && leagueFilter !== 'ALL') {
-      fixtures = fixtures.filter((f) => f.league.toUpperCase() === leagueFilter.toUpperCase());
-    }
-
-    // Apply date filtering if requested
-    if (dateParam) {
-      fixtures = fixtures.filter((f) => f.matchDate === dateParam);
-    } else if (dateFilter === 'TODAY') {
-      fixtures = fixtures.filter((f) => f.matchDate === todayStr);
-    } else if (dateFilter === 'TOMORROW') {
-      fixtures = fixtures.filter((f) => f.matchDate === tomorrowStr);
-    } else if (dateFilter === 'NEXT_3_DAYS') {
-      fixtures = fixtures.filter((f) => f.matchDate >= todayStr && f.matchDate <= next3DaysStr);
-    } else if (dateFilter === 'THIS_WEEK') {
-      fixtures = fixtures.filter((f) => f.matchDate >= todayStr && f.matchDate <= thisWeekStr);
-    } else if (dateFilter === 'CUSTOM') {
-      if (startDate) fixtures = fixtures.filter((f) => f.matchDate >= startDate);
-      if (endDate) fixtures = fixtures.filter((f) => f.matchDate <= endDate);
-    }
+    // Deduplicate fixtures by ID and filter out past fixtures
+    const seenIds = new Set<string>();
+    fixtures = fixtures.filter((f) => {
+      if (!f.id || seenIds.has(f.id) || f.matchDate < todayStr) return false;
+      seenIds.add(f.id);
+      return true;
+    });
 
     // Retrieve all historical matches once for optimal performance
     const allMatches = db.getAllHistoricalMatches(1500);
 
-    // Process every fixture through the Poisson engine
+    // Process EVERY fixture through the Poisson engine first
     const enrichedFixtures: Fixture[] = fixtures.map((f) => {
       // Filter league-specific historical data
       const leagueMatches = allMatches.filter((m) => m.div.toUpperCase() === f.league.toUpperCase());
@@ -91,11 +76,34 @@ fixturesRouter.get('/', async (req, res) => {
       };
     });
 
+    // Apply filters if specifically requested via query params
+    let resultFixtures = enrichedFixtures;
+
+    if (leagueFilter && leagueFilter !== 'ALL') {
+      resultFixtures = resultFixtures.filter((f) => f.league.toUpperCase() === leagueFilter.toUpperCase());
+    }
+
+    if (dateParam) {
+      resultFixtures = resultFixtures.filter((f) => f.matchDate === dateParam);
+    } else if (dateFilter === 'TODAY') {
+      resultFixtures = resultFixtures.filter((f) => f.matchDate === todayStr);
+    } else if (dateFilter === 'TOMORROW') {
+      resultFixtures = resultFixtures.filter((f) => f.matchDate === tomorrowStr);
+    } else if (dateFilter === 'NEXT_3_DAYS') {
+      resultFixtures = resultFixtures.filter((f) => f.matchDate >= todayStr && f.matchDate <= next3DaysStr);
+    } else if (dateFilter === 'THIS_WEEK') {
+      resultFixtures = resultFixtures.filter((f) => f.matchDate >= todayStr && f.matchDate <= thisWeekStr);
+    } else if (dateFilter === 'CUSTOM') {
+      if (startDate) resultFixtures = resultFixtures.filter((f) => f.matchDate >= startDate);
+      if (endDate) resultFixtures = resultFixtures.filter((f) => f.matchDate <= endDate);
+    }
+
     res.json({
       success: true,
       provider: provider.name,
-      count: enrichedFixtures.length,
-      fixtures: enrichedFixtures,
+      count: resultFixtures.length,
+      totalProcessed: enrichedFixtures.length,
+      fixtures: resultFixtures,
     });
   } catch (err: any) {
     console.error('Error fetching fixtures:', err);
@@ -115,7 +123,7 @@ fixturesRouter.get('/:id', async (req, res) => {
     }
 
     const settings: EngineSettings = db.getSettings() || {
-      activeProvider: 'FOOTBALL_DATA_CO_UK',
+      activeProvider: 'FLASHSCORE',
       rollingMatchWindow: 15,
       minEVThreshold: 1.10,
       safeWinThreshold: 0.72,

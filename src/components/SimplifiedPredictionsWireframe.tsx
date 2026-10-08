@@ -33,22 +33,31 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
   marketFilter = 'BEST_VALUE',
 }) => {
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(50);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [fixtures.length, marketFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(fixtures.length / pageSize));
+  const uniqueFixtures = useMemo(() => {
+    const seen = new Set<string>();
+    return fixtures.filter((f) => {
+      if (!f.id || seen.has(f.id)) return false;
+      seen.add(f.id);
+      return true;
+    });
+  }, [fixtures]);
+
+  const totalPages = Math.max(1, Math.ceil(uniqueFixtures.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedFixtures = useMemo(() => {
     const startIndex = (safeCurrentPage - 1) * pageSize;
-    return fixtures.slice(startIndex, startIndex + pageSize);
-  }, [fixtures, safeCurrentPage, pageSize]);
+    return uniqueFixtures.slice(startIndex, startIndex + pageSize);
+  }, [uniqueFixtures, safeCurrentPage, pageSize]);
 
-  const startItemIndex = fixtures.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
-  const endItemIndex = Math.min(safeCurrentPage * pageSize, fixtures.length);
+  const startItemIndex = uniqueFixtures.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
+  const endItemIndex = Math.min(safeCurrentPage * pageSize, uniqueFixtures.length);
 
   // Group paginated fixtures by leagueName
   const groupedByLeague = useMemo(() => {
@@ -124,9 +133,10 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
                     onClick={() => onSelectDetail(fixture)}
                     className="grid grid-cols-12 items-center px-3 sm:px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all cursor-pointer gap-2"
                   >
-                    {/* Time & Score */}
+                    {/* Time, Date & Score */}
                     <div className="col-span-2 flex flex-col justify-center font-mono text-xs text-slate-500 dark:text-slate-400">
                       <span className="font-bold">{kickOff}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{fixture.matchDate}</span>
                       {fixture.score && fixture.score.home !== undefined && (
                         <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                           {fixture.score.home}:{fixture.score.away}

@@ -29,9 +29,31 @@ export interface HistoricalMatchSchema {
   rest_days_away: number; // Rest days before match (default 7)
 }
 
+export type ActiveProviderType = 'FLASHSCORE' | 'ESPN' | 'FOOTBALL_DATA_CO_UK' | 'BIG_BALLS_DATA' | 'FOOTBALL_DATA_ORG' | 'API_FOOTBALL';
+
+export interface FlashscoreScrapedMatchSchema {
+  match_id: string; // Primary Key e.g. 'dtULQoFG'
+  stage?: string | null;
+  status: string;
+  match_date: string;
+  country?: string | null;
+  league_name?: string | null;
+  home_name: string;
+  home_image?: string | null;
+  away_name: string;
+  away_image?: string | null;
+  home_score?: number | null;
+  away_score?: number | null;
+  regulation_time?: string | null;
+  penalties?: string | null;
+  information_json?: string | null;
+  statistics_json?: string | null;
+  scraped_at: string;
+}
+
 export interface UpcomingFixtureSchema {
   id: string; // Primary Key
-  provider_id: string; // Active provider e.g. 'FOOTBALL_DATA_CO_UK'
+  provider_id: ActiveProviderType | string; // Active provider e.g. 'espn' | 'ESPN'
   league: string; // Division code
   league_name: string; // League label
   match_date: string; // YYYY-MM-DD
@@ -49,6 +71,7 @@ export interface UpcomingFixtureSchema {
   draw_prob?: number | null; // Calculated Poisson draw probability (0-1)
   away_win_prob?: number | null; // Calculated Poisson away win probability (0-1)
   status: 'SCHEDULED' | 'LIVE' | 'FINISHED' | 'POSTPONED';
+  date_source?: 'LIVE_FEED' | 'CACHED_DB' | 'INITIAL_FALLBACK';
 }
 
 export interface AppSettingsSchema {
@@ -86,6 +109,17 @@ export interface SimplifiedTableLayoutSchema {
   prediction_col_width: string;
   odds_col_width: string;
   is_simplified: boolean;
+}
+
+export interface FixtureDisplayScopeSchema {
+  date_filter: DateFilterScope;
+  filter_type: 'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG';
+  sort_order: 'LEAGUE_PRIORITY_AND_TIME' | 'CHRONOLOGICAL_TIME' | 'PROBABILITY_RANK';
+  default_display: 'ALL_UPCOMING_FIXTURES';
+  fallback_to_upcoming_when_empty: boolean;
+  league_priority_sorting: boolean;
+  prediction_pipeline: 'PREDICT_ALL_BEFORE_FILTERING';
+  worldwide_leagues_coverage_count: number; // 50+ leagues, cups and international tournaments
 }
 
 export interface AppThemeConfigSchema {
@@ -205,5 +239,29 @@ export const DDL_STATEMENTS = {
       sources_json TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+  `,
+  createFlashscoreMatches: `
+    CREATE TABLE IF NOT EXISTS flashscore_scraped_matches (
+      match_id TEXT PRIMARY KEY,
+      stage TEXT,
+      status TEXT NOT NULL,
+      match_date TEXT NOT NULL,
+      country TEXT,
+      league_name TEXT,
+      home_name TEXT NOT NULL,
+      home_image TEXT,
+      away_name TEXT NOT NULL,
+      away_image TEXT,
+      home_score INTEGER,
+      away_score INTEGER,
+      regulation_time TEXT,
+      penalties TEXT,
+      information_json TEXT,
+      statistics_json TEXT,
+      scraped_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_flashscore_matches_date ON flashscore_scraped_matches(match_date);
+    CREATE INDEX IF NOT EXISTS idx_flashscore_matches_home ON flashscore_scraped_matches(home_name);
+    CREATE INDEX IF NOT EXISTS idx_flashscore_matches_away ON flashscore_scraped_matches(away_name);
   `,
 };

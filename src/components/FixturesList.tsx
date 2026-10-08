@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Search, ChevronDown, Calendar, Sparkles, LayoutList, LayoutGrid } from 'lucide-react';
 import { Fixture } from '../core/types.js';
+import { GLOBAL_LEAGUES_DATASET } from '../core/globalLeaguesDataset.js';
 import { getRelativeDateStr } from '../core/seedData.js';
 import { FixtureCard } from './FixtureCard.js';
 import { SimplifiedPredictionsWireframe } from './SimplifiedPredictionsWireframe.js';
+import { LeagueSelectorModal } from './LeagueSelectorModal.js';
 
 interface FixturesListProps {
   fixtures: Fixture[];
@@ -14,6 +16,22 @@ interface FixturesListProps {
   onViewPrebuiltAccas?: () => void;
 }
 
+const LEAGUE_PRIORITY: Record<string, number> = {
+  E0: 1, // Premier League
+  UCL: 2, // UEFA Champions League
+  SP1: 3, // La Liga
+  D1: 4, // Bundesliga
+  I1: 5, // Serie A
+  UEL: 6, // UEFA Europa League
+  F1: 7, // Ligue 1
+  BRA: 8, // Brasileirão
+  MLS: 9, // MLS
+  SPL: 10, // Saudi Pro League
+  N1: 11, // Eredivisie
+  P1: 12, // Primeira Liga
+  JPL: 13, // J1 League
+};
+
 export const FixturesList: React.FC<FixturesListProps> = ({
   fixtures,
   isLoading,
@@ -23,37 +41,26 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   onViewPrebuiltAccas,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM'>('TODAY');
+  const [dateFilter, setDateFilter] = useState<'TODAY' | 'TOMORROW' | 'NEXT_3_DAYS' | 'THIS_WEEK' | 'ALL' | 'CUSTOM'>('ALL');
   const [customStartDate, setCustomStartDate] = useState(getRelativeDateStr(0));
   const [customEndDate, setCustomEndDate] = useState(getRelativeDateStr(3));
   const [filterType, setFilterType] = useState<'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG'>('ALL');
   const [viewMode, setViewMode] = useState<'WIREFRAME' | 'CARDS'>('WIREFRAME');
   const [marketChoiceFilter, setMarketChoiceFilter] = useState<'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS'>('BEST_VALUE');
+  const [isLeagueModalOpen, setIsLeagueModalOpen] = useState(false);
 
   const dateOptions = [
-    { key: 'TODAY' as const, label: "Today's Picks" },
+    { key: 'ALL' as const, label: 'All Leagues & Dates' },
+    { key: 'THIS_WEEK' as const, label: 'This Week' },
+    { key: 'TODAY' as const, label: "Today's Matches" },
     { key: 'TOMORROW' as const, label: 'Tomorrow' },
     { key: 'NEXT_3_DAYS' as const, label: 'Next 3 Days' },
-    { key: 'THIS_WEEK' as const, label: 'This Week' },
-    { key: 'ALL' as const, label: 'All Dates' },
     { key: 'CUSTOM' as const, label: 'Custom Range...' },
   ];
 
   const leagueOptions = [
     { code: 'ALL', name: 'All Leagues Worldwide' },
-    { code: 'E0', name: 'Premier League' },
-    { code: 'SP1', name: 'La Liga' },
-    { code: 'D1', name: 'Bundesliga' },
-    { code: 'I1', name: 'Serie A' },
-    { code: 'F1', name: 'Ligue 1' },
-    { code: 'UCL', name: 'UEFA Champions League' },
-    { code: 'UEL', name: 'UEFA Europa League' },
-    { code: 'N1', name: 'Eredivisie' },
-    { code: 'P1', name: 'Primeira Liga' },
-    { code: 'BRA', name: 'Brasileirão' },
-    { code: 'MLS', name: 'MLS (USA)' },
-    { code: 'SPL', name: 'Saudi Pro League' },
-    { code: 'JPL', name: 'J1 League' },
+    ...GLOBAL_LEAGUES_DATASET.map((l) => ({ code: l.code, name: `${l.name} (${l.country || 'Global'})` })),
   ];
 
   const filterOptions = [
@@ -64,19 +71,57 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   ];
 
   const marketOptions = [
-    { key: 'BEST_VALUE' as const, label: 'Top Picks' },
+    { key: 'BEST_VALUE' as const, label: 'Best Value' },
     { key: 'OVER_UNDER' as const, label: 'Over Under' },
     { key: '1X2' as const, label: '1X2 Match Winner' },
     { key: 'BTTS' as const, label: 'Both Teams to Score' },
   ];
 
-  const filteredFixtures = useMemo(() => {
-    const todayStr = getRelativeDateStr(0);
-    const tomorrowStr = getRelativeDateStr(1);
-    const next3DaysStr = getRelativeDateStr(2);
-    const thisWeekStr = getRelativeDateStr(6);
+  const datasetDates = useMemo(() => {
+    return Array.from(new Set(fixtures.map((f) => f.matchDate))).filter(Boolean).sort();
+  }, [fixtures]);
 
-    const matches = fixtures.filter((f) => {
+  const baseToday = useMemo(() => {
+    const localToday = getRelativeDateStr(0);
+    if (fixtures.some((f) => f.matchDate === localToday)) {
+      return localToday;
+    }
+    return datasetDates[0] || localToday;
+  }, [fixtures, datasetDates]);
+
+  const getOffsetDate = (offsetDays: number) => {
+    try {
+      const parts = baseToday.split('-');
+      if (parts.length === 3) {
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        d.setDate(d.getDate() + offsetDays);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    } catch {
+      // fallback
+    }
+    return getRelativeDateStr(offsetDays);
+  };
+
+  const uniqueFixtures = useMemo(() => {
+    const seen = new Set<string>();
+    return fixtures.filter((f) => {
+      if (!f.id || seen.has(f.id)) return false;
+      seen.add(f.id);
+      return true;
+    });
+  }, [fixtures]);
+
+  const filteredFixtures = useMemo(() => {
+    const todayStr = baseToday;
+    const tomorrowStr = getOffsetDate(1);
+    const next3DaysStr = getOffsetDate(2);
+    const thisWeekStr = getOffsetDate(6);
+
+    let matches = uniqueFixtures.filter((f) => {
       // Date filtering - defaulted to TODAY
       if (dateFilter === 'TODAY') {
         if (f.matchDate !== todayStr) return false;
@@ -120,22 +165,37 @@ export const FixturesList: React.FC<FixturesListProps> = ({
       return true;
     });
 
-    // If TODAY was selected but 0 matches matched exact date string due to UTC offset, show available active matches
-    let finalFixtures = matches;
-    if (finalFixtures.length === 0 && dateFilter === 'TODAY' && fixtures.length > 0) {
-      const earliestDate = fixtures.map((f) => f.matchDate).sort()[0];
-      if (earliestDate) {
-        finalFixtures = fixtures.filter((f) => f.matchDate === earliestDate);
-      }
+    // Graceful fallback: If TODAY has 0 matches for this specific league selection, show all upcoming matches
+    if (matches.length === 0 && dateFilter === 'TODAY' && fixtures.length > 0) {
+      matches = fixtures.filter((f) => {
+        if (selectedLeague !== 'ALL' && f.league.toUpperCase() !== selectedLeague.toUpperCase()) return false;
+        if (searchQuery.trim().length > 0) {
+          const query = searchQuery.toLowerCase();
+          const matchName = `${f.homeTeam} ${f.awayTeam} ${f.leagueName}`.toLowerCase();
+          if (!matchName.includes(query)) return false;
+        }
+        return true;
+      });
     }
 
-    // Sort by highest probability / value by default so top picks are always prioritized
-    return finalFixtures.slice().sort((a, b) => {
+    // Default: show all fixtures grouped by league priority, then chronologically by match date and time
+    if (filterType === 'ALL') {
+      return matches.slice().sort((a, b) => {
+        const priorityA = LEAGUE_PRIORITY[a.league?.toUpperCase()] || 99;
+        const priorityB = LEAGUE_PRIORITY[b.league?.toUpperCase()] || 99;
+        if (priorityA !== priorityB) return priorityA - priorityB;
+        if (a.matchDate !== b.matchDate) return a.matchDate.localeCompare(b.matchDate);
+        return (a.kickOffTime || '').localeCompare(b.kickOffTime || '');
+      });
+    }
+
+    // Sort by highest probability when filtered for picks
+    return matches.slice().sort((a, b) => {
       const probA = Math.max(a.prediction?.homeWinProb || 0, a.prediction?.awayWinProb || 0);
       const probB = Math.max(b.prediction?.homeWinProb || 0, b.prediction?.awayWinProb || 0);
       return probB - probA;
     });
-  }, [fixtures, dateFilter, customStartDate, customEndDate, selectedLeague, searchQuery, filterType]);
+  }, [fixtures, dateFilter, customStartDate, customEndDate, selectedLeague, searchQuery, filterType, baseToday]);
 
   return (
     <div className="space-y-3 font-sans">
@@ -186,9 +246,18 @@ export const FixturesList: React.FC<FixturesListProps> = ({
 
           {/* League Dropdown Filter */}
           <div className="col-span-1 lg:col-span-2 relative min-w-0">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 truncate">
-              League
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                League
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsLeagueModalOpen(true)}
+                className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+              >
+                Browse 200+...
+              </button>
+            </div>
             <div className="relative">
               <select
                 id="league-filter-dropdown"
@@ -196,8 +265,8 @@ export const FixturesList: React.FC<FixturesListProps> = ({
                 onChange={(e) => onSelectLeague(e.target.value)}
                 className="w-full bg-slate-100/90 dark:bg-slate-900/90 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none truncate shadow-xs"
               >
-                {leagueOptions.map((opt) => (
-                  <option key={opt.code} value={opt.code} className="bg-white dark:bg-slate-900">
+                {leagueOptions.map((opt, idx) => (
+                  <option key={`${opt.code}-${idx}`} value={opt.code} className="bg-white dark:bg-slate-900">
                     {opt.name}
                   </option>
                 ))}
@@ -361,6 +430,13 @@ export const FixturesList: React.FC<FixturesListProps> = ({
           ))}
         </div>
       )}
+
+      <LeagueSelectorModal
+        isOpen={isLeagueModalOpen}
+        onClose={() => setIsLeagueModalOpen(false)}
+        selectedLeague={selectedLeague}
+        onSelectLeague={onSelectLeague}
+      />
     </div>
   );
 };

@@ -19,9 +19,9 @@ export interface LiveOddsUpdate {
 }
 
 export interface APIProvider {
-  id: 'FOOTBALL_DATA_CO_UK' | 'BIG_BALLS_DATA' | 'FOOTBALL_DATA_ORG' | 'API_FOOTBALL';
+  id: 'FLASHSCORE' | 'ESPN' | 'FOOTBALL_DATA_CO_UK' | 'BIG_BALLS_DATA' | 'FOOTBALL_DATA_ORG' | 'API_FOOTBALL';
   name: string;
-  type: 'CSV' | 'REST' | 'HYBRID';
+  type: 'CSV' | 'REST' | 'HYBRID' | 'SCRAPER';
   description: string;
   features: string[];
 

@@ -20,7 +20,7 @@ export class FootballDB {
   private fallbackHistoricalMatches: HistoricalMatch[] = [];
   private fallbackUpcomingFixtures: Fixture[] = [];
   private fallbackSettings: EngineSettings = {
-    activeProvider: 'FOOTBALL_DATA_CO_UK',
+    activeProvider: 'FLASHSCORE',
     rollingMatchWindow: 15,
     minEVThreshold: 1.10,
     safeWinThreshold: 0.72,
@@ -183,6 +183,28 @@ export class FootballDB {
         sources_json TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS flashscore_scraped_matches (
+        match_id TEXT PRIMARY KEY,
+        stage TEXT,
+        status TEXT NOT NULL,
+        match_date TEXT NOT NULL,
+        country TEXT,
+        league_name TEXT,
+        home_name TEXT NOT NULL,
+        home_image TEXT,
+        away_name TEXT NOT NULL,
+        away_image TEXT,
+        home_score INTEGER,
+        away_score INTEGER,
+        regulation_time TEXT,
+        penalties TEXT,
+        information_json TEXT,
+        statistics_json TEXT,
+        scraped_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_flashscore_matches_date ON flashscore_scraped_matches(match_date);
     `);
 
     // Insert default settings if not exists
@@ -341,6 +363,8 @@ export class FootballDB {
         filtered = filtered.filter((f) => f.matchDate <= getRelativeDateStr(2));
       } else if (dateFilter === 'THIS_WEEK') {
         filtered = filtered.filter((f) => f.matchDate <= getRelativeDateStr(6));
+      } else if (dateFilter && /^\d{4}-\d{2}-\d{2}$/.test(dateFilter)) {
+        filtered = filtered.filter((f) => f.matchDate === dateFilter);
       }
       return filtered;
     }
@@ -366,6 +390,9 @@ export class FootballDB {
       } else if (dateFilter === 'THIS_WEEK') {
         query += ` AND match_date <= ?`;
         params.push(getRelativeDateStr(6));
+      } else if (dateFilter && /^\d{4}-\d{2}-\d{2}$/.test(dateFilter)) {
+        query += ` AND match_date = ?`;
+        params.push(dateFilter);
       }
 
       query += ` ORDER BY match_date ASC, kick_off_time ASC`;
@@ -374,10 +401,15 @@ export class FootballDB {
       stmt.bind(params);
 
       const fixtures: Fixture[] = [];
+      const seenIds = new Set<string>();
       while (stmt.step()) {
         const row = stmt.getAsObject();
+        const fixtureId = String(row.id);
+        if (seenIds.has(fixtureId)) continue;
+        seenIds.add(fixtureId);
+
         fixtures.push({
-          id: String(row.id),
+          id: fixtureId,
           providerId: String(row.provider_id),
           league: String(row.league),
           leagueName: String(row.league_name),
@@ -641,7 +673,14 @@ export class FootballDB {
   }
 
   saveUpcomingFixtures(fixtures: Fixture[]): void {
-    this.fallbackUpcomingFixtures = fixtures;
+    const seen = new Set<string>();
+    const unique = fixtures.filter((f) => {
+      if (!f.id || seen.has(f.id)) return false;
+      seen.add(f.id);
+      return true;
+    });
+
+    this.fallbackUpcomingFixtures = unique;
     if (!this.db) return;
     try {
       this.db.run(`DELETE FROM upcoming_fixtures`);
@@ -652,10 +691,10 @@ export class FootballDB {
           b365_btts_yes, b365_btts_no, status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      for (const f of fixtures) {
+      for (const f of unique) {
         stmt.run([
           f.id,
-          f.providerId || 'espn',
+          f.providerId || 'flashscore',
           String(f.league),
           f.leagueName,
           f.matchDate,
@@ -676,6 +715,102 @@ export class FootballDB {
       this.saveToDisk();
     } catch {
       // ignore
+    }
+  }
+
+  saveFlashscoreScrapedMatches(matches: Array<{
+    matchId: string;
+    stage?: string;
+    status: string;
+    date: string;
+    country?: string;
+    leagueName?: string;
+    home: { name: string; image?: string };
+    away: { name: string; image?: string };
+    result?: { home?: string; away?: string; regulationTime?: string; penalties?: string };
+    information?: Array<{ category: string; value: string }>;
+    statistics?: Array<{ category: string; homeValue?: string; awayValue?: string }>;
+  }>): void {
+    if (!this.db || matches.length === 0) return;
+    try {
+      const stmt = this.db.prepare(`
+        INSERT OR REPLACE INTO flashscore_scraped_matches (
+          match_id, stage, status, match_date, country, league_name,
+          home_name, home_image, away_name, away_image,
+          home_score, away_score, regulation_time, penalties,
+          information_json, statistics_json, scraped_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const m of matches) {
+        stmt.run([
+          m.matchId,
+          m.stage || null,
+          m.status || 'SCHEDULED',
+          m.date || '',
+          m.country || null,
+          m.leagueName || null,
+          m.home.name,
+          m.home.image || null,
+          m.away.name,
+          m.away.image || null,
+          m.result?.home ? parseInt(m.result.home, 10) : null,
+          m.result?.away ? parseInt(m.result.away, 10) : null,
+          m.result?.regulationTime || null,
+          m.result?.penalties || null,
+          m.information ? JSON.stringify(m.information) : null,
+          m.statistics ? JSON.stringify(m.statistics) : null,
+          new Date().toISOString(),
+        ]);
+      }
+      stmt.free();
+      this.saveToDisk();
+    } catch (err) {
+      console.warn('Error saving scraped matches to database:', err);
+    }
+  }
+
+  getFlashscoreScrapedMatches(limit = 100): any[] {
+    if (!this.db) return [];
+    try {
+      const stmt = this.db.prepare(`
+        SELECT * FROM flashscore_scraped_matches
+        ORDER BY match_date DESC
+        LIMIT ?
+      `);
+      stmt.bind([limit]);
+      const results: any[] = [];
+      while (stmt.step()) {
+        const row = stmt.getAsObject();
+        results.push({
+          matchId: String(row.match_id),
+          stage: row.stage ? String(row.stage) : undefined,
+          status: String(row.status),
+          date: String(row.match_date),
+          country: row.country ? String(row.country) : undefined,
+          leagueName: row.league_name ? String(row.league_name) : undefined,
+          home: {
+            name: String(row.home_name),
+            image: row.home_image ? String(row.home_image) : undefined,
+          },
+          away: {
+            name: String(row.away_name),
+            image: row.away_image ? String(row.away_image) : undefined,
+          },
+          result: {
+            home: row.home_score !== null ? String(row.home_score) : undefined,
+            away: row.away_score !== null ? String(row.away_score) : undefined,
+            regulationTime: row.regulation_time ? String(row.regulation_time) : undefined,
+            penalties: row.penalties ? String(row.penalties) : undefined,
+          },
+          information: row.information_json ? JSON.parse(String(row.information_json)) : [],
+          statistics: row.statistics_json ? JSON.parse(String(row.statistics_json)) : [],
+        });
+      }
+      stmt.free();
+      return results;
+    } catch {
+      return [];
     }
   }
 

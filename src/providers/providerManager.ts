@@ -1,4 +1,6 @@
 import { APIProvider } from './types.js';
+import { FlashscoreProvider } from './flashscoreProvider.js';
+import { EspnProvider } from './espnProvider.js';
 import { FootballDataCoUkProvider } from './footballDataCoUk.js';
 import { BigBallsDataProvider } from './bigBallsData.js';
 import { FootballDataOrgProvider } from './footballDataOrg.js';
@@ -8,9 +10,11 @@ import { db } from '../core/db.js';
 
 export class ProviderManager {
   private providers: Map<string, APIProvider> = new Map();
-  private activeProviderId: EngineSettings['activeProvider'] = 'FOOTBALL_DATA_CO_UK';
+  private activeProviderId: EngineSettings['activeProvider'] = 'FLASHSCORE';
 
   constructor() {
+    this.registerProvider(new FlashscoreProvider());
+    this.registerProvider(new EspnProvider());
     this.registerProvider(new FootballDataCoUkProvider());
     this.registerProvider(new BigBallsDataProvider());
     this.registerProvider(new FootballDataOrgProvider());
@@ -29,8 +33,8 @@ export class ProviderManager {
     const provider = this.providers.get(currentId);
     if (provider) return provider;
 
-    // Fallback to default
-    return this.providers.get('FOOTBALL_DATA_CO_UK')!;
+    // Fallback to Flashscore default
+    return this.providers.get('FLASHSCORE') || this.providers.get('ESPN') || this.providers.get('FOOTBALL_DATA_CO_UK')!;
   }
 
   setActiveProvider(providerId: EngineSettings['activeProvider']): boolean {
@@ -49,6 +53,8 @@ export class ProviderManager {
   getAllProvidersStatus(): ProviderStatus[] {
     const list: ProviderStatus[] = [];
     const latencies: Record<string, number> = {
+      FLASHSCORE: 14, // Direct Flashscore live scraper
+      ESPN: 12,
       FOOTBALL_DATA_CO_UK: 4, // local SQLite/CSV
       BIG_BALLS_DATA: 18,
       FOOTBALL_DATA_ORG: 42,
