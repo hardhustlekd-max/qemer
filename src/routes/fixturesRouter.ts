@@ -4,6 +4,7 @@ import { providerManager } from '../providers/providerManager.js';
 import { PoissonEngine } from '../core/poisson.js';
 import { EngineSettings, Fixture } from '../core/types.js';
 import { getRelativeDateStr } from '../core/seedData.js';
+import { isMatchStarted } from '../core/accumulator.js';
 
 export const fixturesRouter = Router();
 
@@ -34,10 +35,10 @@ fixturesRouter.get('/', async (req, res) => {
     const next3DaysStr = getRelativeDateStr(2);
     const thisWeekStr = getRelativeDateStr(6);
 
-    // Deduplicate fixtures by ID and filter out past fixtures
+    // Deduplicate fixtures by ID and filter out past/started fixtures
     const seenIds = new Set<string>();
     fixtures = fixtures.filter((f) => {
-      if (!f.id || seenIds.has(f.id) || f.matchDate < todayStr) return false;
+      if (!f.id || seenIds.has(f.id) || isMatchStarted(f)) return false;
       seenIds.add(f.id);
       return true;
     });
