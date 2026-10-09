@@ -6,7 +6,7 @@ export class FlashscoreProvider implements APIProvider {
   id = 'FLASHSCORE' as const;
   name = 'Flashscore Live Scraper';
   type = 'SCRAPER' as const;
-  description = 'Direct FlashscoreScraping engine extracting live match results, in-play statistics, worldwide fixture lineups, and odds directly from Flashscore.';
+  description = 'Direct FlashscoreScraping engine extracting live match results, in-play statistics, worldwide fixtures, and results directly from Flashscore.';
   features = [
     'Direct Flashscore Scraper Engine',
     'Real-Time Live Scores & Minutes',

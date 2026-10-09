@@ -13,8 +13,6 @@ import { FootballDataCSVParser } from '../core/csvParser.js';
 import { getRelativeDateStr } from '../core/seedData.js';
 import { LiveScore } from '../providers/types.js';
 import { GLOBAL_LEAGUES_DATASET } from '../core/globalLeaguesDataset.js';
-import { fetchRealLiveScores } from './realLiveScoresService.js';
-import { fetchRealUpcomingFixtures } from './realUpcomingFixturesService.js';
 import { getInitialHistoricalMatches, getInitialUpcomingFixtures } from '../core/initialDbDataset.js';
 
 // Default In-Memory Engine State for Universal & Client-Side execution (Vercel, Static, etc.)
@@ -37,54 +35,9 @@ const PROVIDER_METADATA: ProviderStatus[] = [
     name: 'Flashscore Live Scraper',
     type: 'SCRAPER',
     status: 'ONLINE',
-    description: 'Direct FlashscoreScraping engine extracting live match results, in-play statistics, worldwide fixture lineups, and odds directly from Flashscore.',
+    description: 'Direct FlashscoreScraping engine extracting live match results, in-play statistics, worldwide fixtures, and results directly from Flashscore.',
     latencyMs: 14,
     features: ['Direct Flashscore Feed Scraper', 'Real-Time In-Play Scores', '50+ Worldwide Leagues & Cups', 'Live Statistics & Results', 'Instant SQLite Sync'],
-  },
-  {
-    id: 'ESPN',
-    name: 'ESPN Global Sports Feed',
-    type: 'REST',
-    status: 'ONLINE',
-    description: 'Direct real-time global soccer scoreboard, schedules and in-play events feed with live match minutes and moneyline odds.',
-    latencyMs: 12,
-    features: ['Real-Time Live Scoreboard', 'Official Match Schedules', 'Worldwide League Coverage', 'In-Play Live Events'],
-  },
-  {
-    id: 'FOOTBALL_DATA_CO_UK',
-    name: 'Football-Data.co.uk',
-    type: 'CSV',
-    status: 'ONLINE',
-    description: 'Direct structured historical CSV parser (E0.csv, SP1.csv, D1.csv, I1.csv) with closing Bet365/Pinnacle market odds.',
-    latencyMs: 4,
-    features: ['Historical CSV Ingestion', 'Half-Time Goals', 'Closing Bet365 Odds', 'Multi-League Support'],
-  },
-  {
-    id: 'BIG_BALLS_DATA',
-    name: 'Big Balls Data Feed',
-    type: 'REST',
-    status: 'ONLINE',
-    description: 'Specialized deep-football statistics provider with momentum weighting and live line updates.',
-    latencyMs: 18,
-    features: ['Momentum Weighting', 'Rest-Day Adjustments', 'Real-Time Line Movements'],
-  },
-  {
-    id: 'FOOTBALL_DATA_ORG',
-    name: 'Football-Data.org API',
-    type: 'REST',
-    status: 'ONLINE',
-    description: 'Standard RESTful matchday fixture schedules with structured team formations and squad availability.',
-    latencyMs: 42,
-    features: ['Fixture Schedules', 'Team Formations', 'Standings Correlation'],
-  },
-  {
-    id: 'API_FOOTBALL',
-    name: 'API-Football (RapidAPI)',
-    type: 'REST',
-    status: 'ONLINE',
-    description: 'High-frequency live football odds provider with in-play statistics and minute-by-minute updates.',
-    latencyMs: 55,
-    features: ['Live In-Play Odds', 'Minute Events', '25+ Bookmakers'],
   },
 ];
 
@@ -134,7 +87,7 @@ export class EngineService {
         const { flashscoreScraperService } = await import('./flashscoreScraperService.js');
         localUpcomingFixtures = await flashscoreScraperService.getUpcomingFixtures();
       } catch {
-        localUpcomingFixtures = await fetchRealUpcomingFixtures();
+        // Fallback to initial dataset if scraper fails
       }
     }
 
@@ -316,11 +269,6 @@ export class EngineService {
     const serverData = await this.safeJsonFetch('/api/providers/live-scores');
     if (serverData && serverData.success && Array.isArray(serverData.scores) && serverData.scores.length > 0) {
       return serverData.scores;
-    }
-
-    const realScores = await fetchRealLiveScores();
-    if (realScores && realScores.length > 0) {
-      return realScores;
     }
 
     return [];

@@ -12,11 +12,15 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
   onSelectDetail,
 }) => {
   const pred = fixture.prediction;
-  const bestValue = fixture.bestValueMarket;
 
-  const homeWinMarket = fixture.markets?.find((m) => m.key === 'HOME_WIN');
-  const drawMarket = fixture.markets?.find((m) => m.key === 'DRAW');
-  const awayWinMarket = fixture.markets?.find((m) => m.key === 'AWAY_WIN');
+  // Derive highest probability prediction
+  const topPredictionLabel = pred
+    ? pred.homeWinProb >= pred.awayWinProb && pred.homeWinProb >= pred.drawProb
+      ? `${fixture.homeTeam} Win (${Math.round(pred.homeWinProb * 100)}%)`
+      : pred.awayWinProb >= pred.homeWinProb && pred.awayWinProb >= pred.drawProb
+      ? `${fixture.awayTeam} Win (${Math.round(pred.awayWinProb * 100)}%)`
+      : `Draw (${Math.round(pred.drawProb * 100)}%)`
+    : null;
 
   return (
     <div
@@ -24,28 +28,35 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
       className="bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 rounded-2xl p-4 transition-all shadow-xs hover:shadow-sm flex flex-col justify-between group"
     >
       <div>
-        {/* Top bar: League, Time, Status */}
+        {/* Top bar: League, Time, Stage / Status */}
         <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-2xs">
               {fixture.leagueName}
             </span>
+            {fixture.stage && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400">
+                {fixture.stage}
+              </span>
+            )}
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
               {fixture.kickOffTime}
             </span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            {bestValue && bestValue.isPositiveEV && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-2xs">
-                <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                +{(bestValue.expectedValue * 100).toFixed(1)}% EV
+            {fixture.status === 'LIVE' ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                LIVE
               </span>
-            )}
-            {bestValue && bestValue.isBanker && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 shadow-2xs">
-                <Shield className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                Banker
+            ) : fixture.status === 'FINISHED' ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                FT
+              </span>
+            ) : (
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-500">
+                {fixture.matchDate}
               </span>
             )}
           </div>
@@ -56,6 +67,14 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           {/* Home Team */}
           <div className="col-span-5 flex flex-col">
             <div className="flex items-center gap-1.5 min-w-0">
+              {fixture.homeBadge && (
+                <img
+                  src={fixture.homeBadge}
+                  alt=""
+                  className="w-4 h-4 object-contain shrink-0 rounded-full"
+                  onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                />
+              )}
               <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate" title={fixture.homeTeam}>
                 {fixture.homeTeam}
               </span>
@@ -102,6 +121,14 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
               <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate" title={fixture.awayTeam}>
                 {fixture.awayTeam}
               </span>
+              {fixture.awayBadge && (
+                <img
+                  src={fixture.awayBadge}
+                  alt=""
+                  className="w-4 h-4 object-contain shrink-0 rounded-full"
+                  onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                />
+              )}
             </div>
             {pred && (
               <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
@@ -111,9 +138,17 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           </div>
         </div>
 
+        {/* Extra Result Details from Scraper (regulation or penalties) */}
+        {fixture.resultDetails && (fixture.resultDetails.regulationTime || fixture.resultDetails.penalties) && (
+          <div className="text-center font-mono text-[10px] text-slate-500 dark:text-slate-400 py-0.5">
+            {fixture.resultDetails.regulationTime && <span>Reg: {fixture.resultDetails.regulationTime} </span>}
+            {fixture.resultDetails.penalties && <span className="font-bold text-emerald-600 dark:text-emerald-400">(Pen: {fixture.resultDetails.penalties})</span>}
+          </div>
+        )}
+
         {/* Probability Bar Indicator */}
         {pred && (
-          <div className="my-3 space-y-1">
+          <div className="my-2.5 space-y-1">
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400">
               <span className="text-emerald-600 dark:text-emerald-400 font-bold">{(pred.homeWinProb * 100).toFixed(0)}%</span>
               <span className="text-amber-600 dark:text-amber-400 font-bold">{(pred.drawProb * 100).toFixed(0)}%</span>
@@ -139,85 +174,54 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           </div>
         )}
 
-        {/* Best Value Pick Recommendation */}
-        {bestValue && (
-          <div className="mt-2.5 mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-xs shadow-xs">
+        {/* Highest Predicted Outcome */}
+        {topPredictionLabel && (
+          <div className="mt-2 mb-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-xs shadow-xs">
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Top Value Pick:</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">{bestValue.name}</span>
+              <span className="text-[10px] font-bold uppercase text-slate-400">Predicted Outcome:</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">{topPredictionLabel}</span>
             </div>
-            <span className="font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-0.5 rounded-lg text-[11px] shadow-xs">
-              @{bestValue.odds.toFixed(2)}
-            </span>
           </div>
         )}
       </div>
 
-      {/* Bookmaker Odds 1X2 Info */}
-      <div className="grid grid-cols-3 gap-1.5 pt-2">
-        {/* Home Win */}
-        {homeWinMarket && (
+      {/* 1X2 Probabilities Selection Grid */}
+      {pred && (
+        <div className="grid grid-cols-3 gap-1.5 pt-1.5">
           <button
             type="button"
             onClick={() => onSelectDetail(fixture)}
-            className={`p-2 rounded-xl text-center transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${
-              homeWinMarket.isPositiveEV
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-slate-900 dark:text-slate-200'
-                : 'bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-300'
-            }`}
+            className="p-1.5 rounded-xl text-center bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
           >
             <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">Home</span>
-            <span className="font-mono font-bold text-xs">{homeWinMarket.odds.toFixed(2)}</span>
-            {homeWinMarket.isPositiveEV && (
-              <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">
-                +{(homeWinMarket.expectedValue * 100).toFixed(0)}% EV
-              </span>
-            )}
+            <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+              {Math.round(pred.homeWinProb * 100)}%
+            </span>
           </button>
-        )}
 
-        {/* Draw */}
-        {drawMarket && (
           <button
             type="button"
             onClick={() => onSelectDetail(fixture)}
-            className={`p-2 rounded-xl text-center transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${
-              drawMarket.isPositiveEV
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-slate-900 dark:text-slate-200'
-                : 'bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-300'
-            }`}
+            className="p-1.5 rounded-xl text-center bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
           >
             <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">Draw</span>
-            <span className="font-mono font-bold text-xs">{drawMarket.odds.toFixed(2)}</span>
-            {drawMarket.isPositiveEV && (
-              <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">
-                +{(drawMarket.expectedValue * 100).toFixed(0)}% EV
-              </span>
-            )}
+            <span className="font-mono font-bold text-xs text-amber-600 dark:text-amber-400">
+              {Math.round(pred.drawProb * 100)}%
+            </span>
           </button>
-        )}
 
-        {/* Away Win */}
-        {awayWinMarket && (
           <button
             type="button"
             onClick={() => onSelectDetail(fixture)}
-            className={`p-2 rounded-xl text-center transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${
-              awayWinMarket.isPositiveEV
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-slate-900 dark:text-slate-200'
-                : 'bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-300'
-            }`}
+            className="p-1.5 rounded-xl text-center bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
           >
             <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">Away</span>
-            <span className="font-mono font-bold text-xs">{awayWinMarket.odds.toFixed(2)}</span>
-            {awayWinMarket.isPositiveEV && (
-              <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">
-                +{(awayWinMarket.expectedValue * 100).toFixed(0)}% EV
-              </span>
-            )}
+            <span className="font-mono font-bold text-xs text-cyan-600 dark:text-cyan-400">
+              {Math.round(pred.awayWinProb * 100)}%
+            </span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

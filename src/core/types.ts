@@ -106,22 +106,11 @@ export interface LastYearPerformanceMeasurement {
   historicalBaselineFactor: number;
 }
 
-export interface PlayerContributionItem {
-  name: string;
-  position: 'GK' | 'DF' | 'MF' | 'FW';
+export interface EloRatingMeasurement {
   rating: number;
-  goals: number;
-  assists: number;
-  contributionFactor: number;
-  isKeyPlayer: boolean;
-}
-
-export interface TeamLineupMeasurement {
-  formation: string;
-  startingXIRating: number;
-  lineupStrengthFactor: number;
-  keyStartersPresent: number;
-  players: PlayerContributionItem[];
+  lastUpdated: string;
+  volatility: number;
+  recentChange: number;
 }
 
 export interface PredictionEngineMeasurements {
@@ -135,23 +124,16 @@ export interface PredictionEngineMeasurements {
     home: LastYearPerformanceMeasurement;
     away: LastYearPerformanceMeasurement;
   };
-  lineup: {
-    home: TeamLineupMeasurement;
-    away: TeamLineupMeasurement;
-  };
-  playerContribution: {
-    homeTopContributors: PlayerContributionItem[];
-    awayTopContributors: PlayerContributionItem[];
-    homeImpactScore: number;
-    awayImpactScore: number;
+  eloRating: {
+    home: EloRatingMeasurement;
+    away: EloRatingMeasurement;
   };
   combinedWeights: {
     h2hWeight: number;
     standingWeight: number;
     thisYearWeight: number;
     lastYearWeight: number;
-    lineupWeight: number;
-    playerContributionWeight: number;
+    eloRatingWeight: number;
   };
 }
 
@@ -222,6 +204,20 @@ export interface Fixture {
   score?: { home: number; away: number };
   minute?: number;
   measurements?: PredictionEngineMeasurements;
+  stage?: string;
+  resultDetails?: {
+    regulationTime?: string;
+    penalties?: string;
+  };
+  information?: {
+    category: string;
+    value: string;
+  }[];
+  statistics?: {
+    category: string;
+    homeValue?: string;
+    awayValue?: string;
+  }[];
 }
 
 export interface AccaLeg {

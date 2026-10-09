@@ -315,6 +315,7 @@ export class FlashscoreScraperService {
           homeBadge: m.homeBadge ? `${STATIC_IMAGE_BASE}${m.homeBadge}` : undefined,
           awayBadge: m.awayBadge ? `${STATIC_IMAGE_BASE}${m.awayBadge}` : undefined,
           status: isLive ? 'LIVE' : 'SCHEDULED',
+          stage: m.tournament,
           odds,
           score: (m.homeScore !== undefined && m.awayScore !== undefined)
             ? { home: m.homeScore, away: m.awayScore }

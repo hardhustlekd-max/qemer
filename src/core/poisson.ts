@@ -12,8 +12,7 @@ import {
   LeagueStandingMeasurement,
   SeasonPerformanceMeasurement,
   LastYearPerformanceMeasurement,
-  PlayerContributionItem,
-  TeamLineupMeasurement,
+  EloRatingMeasurement,
   PredictionEngineMeasurements,
 } from './types.js';
 
@@ -421,184 +420,43 @@ export class PoissonEngine {
   }
 
   /**
-   * Team Lineup Measurement
+   * Elo Rating Measurement
    */
-  public static computeTeamLineup(
+  public static computeEloRating(
     teamName: string,
-    stats: TeamStatsSummary
-  ): TeamLineupMeasurement {
-    let formation = '4-3-3';
-    if (stats.homeAttack > 1.25 || stats.awayAttack > 1.25) {
-      formation = '4-3-3';
-    } else if (stats.homeDefense < 0.85 || stats.awayDefense < 0.85) {
-      formation = '3-5-2';
-    } else if (stats.formScore > 1.05) {
-      formation = '4-2-3-1';
-    } else {
-      formation = '4-4-2';
-    }
-
-    const baseQuality = Number(
-      (72 + (stats.homeAttack + stats.awayAttack - 1.5) * 6 + (stats.formScore - 0.9) * 10).toFixed(1)
-    );
-    const startingXIRating = Math.max(68, Math.min(89, baseQuality));
-    const lineupStrengthFactor = Number(
-      Math.max(0.91, Math.min(1.14, 0.92 + (startingXIRating - 70) * 0.012)).toFixed(3)
+    allMatches: HistoricalMatch[]
+  ): EloRatingMeasurement {
+    const teamMatches = allMatches.filter(
+      (m) =>
+        m.homeTeam.toLowerCase() === teamName.toLowerCase() ||
+        m.awayTeam.toLowerCase() === teamName.toLowerCase()
     );
 
-    const knownSquads: Record<string, { name: string; pos: 'GK' | 'DF' | 'MF' | 'FW'; baseRating: number }[]> = {
-      arsenal: [
-        { name: 'D. Raya', pos: 'GK', baseRating: 8.1 },
-        { name: 'W. Saliba', pos: 'DF', baseRating: 8.6 },
-        { name: 'Gabriel', pos: 'DF', baseRating: 8.4 },
-        { name: 'B. White', pos: 'DF', baseRating: 8.0 },
-        { name: 'J. Timber', pos: 'DF', baseRating: 7.9 },
-        { name: 'D. Rice', pos: 'MF', baseRating: 8.7 },
-        { name: 'M. Odegaard', pos: 'MF', baseRating: 8.8 },
-        { name: 'T. Partey', pos: 'MF', baseRating: 7.8 },
-        { name: 'B. Saka', pos: 'FW', baseRating: 8.9 },
-        { name: 'K. Havertz', pos: 'FW', baseRating: 8.2 },
-        { name: 'G. Martinelli', pos: 'FW', baseRating: 8.1 },
-      ],
-      chelsea: [
-        { name: 'R. Sanchez', pos: 'GK', baseRating: 7.6 },
-        { name: 'M. Gusto', pos: 'DF', baseRating: 7.8 },
-        { name: 'L. Colwill', pos: 'DF', baseRating: 8.0 },
-        { name: 'W. Fofana', pos: 'DF', baseRating: 7.9 },
-        { name: 'M. Cucurella', pos: 'DF', baseRating: 7.8 },
-        { name: 'M. Caicedo', pos: 'MF', baseRating: 8.3 },
-        { name: 'E. Fernandez', pos: 'MF', baseRating: 8.2 },
-        { name: 'C. Palmer', pos: 'MF', baseRating: 8.9 },
-        { name: 'N. Madueke', pos: 'FW', baseRating: 7.9 },
-        { name: 'N. Jackson', pos: 'FW', baseRating: 8.0 },
-        { name: 'J. Sancho', pos: 'FW', baseRating: 7.8 },
-      ],
-      'real madrid': [
-        { name: 'T. Courtois', pos: 'GK', baseRating: 8.8 },
-        { name: 'D. Carvajal', pos: 'DF', baseRating: 8.3 },
-        { name: 'A. Rudiger', pos: 'DF', baseRating: 8.5 },
-        { name: 'E. Militao', pos: 'DF', baseRating: 8.2 },
-        { name: 'F. Mendy', pos: 'DF', baseRating: 7.9 },
-        { name: 'F. Valverde', pos: 'MF', baseRating: 8.7 },
-        { name: 'A. Tchouameni', pos: 'MF', baseRating: 8.3 },
-        { name: 'J. Bellingham', pos: 'MF', baseRating: 8.9 },
-        { name: 'Rodrygo', pos: 'FW', baseRating: 8.4 },
-        { name: 'K. Mbappe', pos: 'FW', baseRating: 9.1 },
-        { name: 'Vinicius Jr', pos: 'FW', baseRating: 9.1 },
-      ],
-      barcelona: [
-        { name: 'M. ter Stegen', pos: 'GK', baseRating: 8.4 },
-        { name: 'J. Kounde', pos: 'DF', baseRating: 8.3 },
-        { name: 'P. Cubarsi', pos: 'DF', baseRating: 8.1 },
-        { name: 'I. Martinez', pos: 'DF', baseRating: 7.9 },
-        { name: 'A. Balde', pos: 'DF', baseRating: 8.0 },
-        { name: 'Pedri', pos: 'MF', baseRating: 8.8 },
-        { name: 'M. Casado', pos: 'MF', baseRating: 7.9 },
-        { name: 'Dani Olmo', pos: 'MF', baseRating: 8.4 },
-        { name: 'L. Yamal', pos: 'FW', baseRating: 8.9 },
-        { name: 'R. Lewandowski', pos: 'FW', baseRating: 8.7 },
-        { name: 'Raphinha', pos: 'FW', baseRating: 8.8 },
-      ],
-      'manchester city': [
-        { name: 'Ederson', pos: 'GK', baseRating: 8.5 },
-        { name: 'K. Walker', pos: 'DF', baseRating: 8.0 },
-        { name: 'M. Akanji', pos: 'DF', baseRating: 8.2 },
-        { name: 'R. Dias', pos: 'DF', baseRating: 8.7 },
-        { name: 'J. Gvardiol', pos: 'DF', baseRating: 8.3 },
-        { name: 'Rodri', pos: 'MF', baseRating: 9.1 },
-        { name: 'K. De Bruyne', pos: 'MF', baseRating: 8.9 },
-        { name: 'B. Silva', pos: 'MF', baseRating: 8.6 },
-        { name: 'P. Foden', pos: 'FW', baseRating: 8.7 },
-        { name: 'E. Haaland', pos: 'FW', baseRating: 9.3 },
-        { name: 'J. Grealish', pos: 'FW', baseRating: 8.1 },
-      ],
-      liverpool: [
-        { name: 'Alisson', pos: 'GK', baseRating: 8.7 },
-        { name: 'T. Alexander-Arnold', pos: 'DF', baseRating: 8.6 },
-        { name: 'I. Konate', pos: 'DF', baseRating: 8.3 },
-        { name: 'V. van Dijk', pos: 'DF', baseRating: 8.8 },
-        { name: 'A. Robertson', pos: 'DF', baseRating: 8.2 },
-        { name: 'R. Gravenberch', pos: 'MF', baseRating: 8.4 },
-        { name: 'A. Mac Allister', pos: 'MF', baseRating: 8.5 },
-        { name: 'D. Szoboszlai', pos: 'MF', baseRating: 8.2 },
-        { name: 'M. Salah', pos: 'FW', baseRating: 9.1 },
-        { name: 'D. Nunez', pos: 'FW', baseRating: 8.1 },
-        { name: 'L. Diaz', pos: 'FW', baseRating: 8.5 },
-      ],
-    };
+    let rating = 1500;
+    const K = 20;
 
-    const teamKey = Object.keys(knownSquads).find((k) => teamName.toLowerCase().includes(k));
-    let rawSquad = teamKey ? knownSquads[teamKey] : null;
+    for (const m of teamMatches) {
+      const isHome = m.homeTeam.toLowerCase() === teamName.toLowerCase();
+      const opponentName = isHome ? m.awayTeam : m.homeTeam;
+      const result = isHome ? m.ftr : (m.ftr === 'H' ? 'A' : m.ftr === 'A' ? 'H' : 'D');
+      
+      const score = result === 'H' ? 1 : result === 'D' ? 0.5 : 0;
+      const expected = 0.5; // Simplified expectation
 
-    if (!rawSquad) {
-      const prefix = teamName.slice(0, 3);
-      rawSquad = [
-        { name: `${prefix} GK 1`, pos: 'GK', baseRating: Number((startingXIRating / 10 - 0.2).toFixed(1)) },
-        { name: `${prefix} DF 2`, pos: 'DF', baseRating: Number((startingXIRating / 10 - 0.1).toFixed(1)) },
-        { name: `${prefix} DF 3`, pos: 'DF', baseRating: Number((startingXIRating / 10).toFixed(1)) },
-        { name: `${prefix} DF 4`, pos: 'DF', baseRating: Number((startingXIRating / 10 + 0.1).toFixed(1)) },
-        { name: `${prefix} DF 5`, pos: 'DF', baseRating: Number((startingXIRating / 10 - 0.2).toFixed(1)) },
-        { name: `${prefix} MF 6`, pos: 'MF', baseRating: Number((startingXIRating / 10).toFixed(1)) },
-        { name: `${prefix} MF 7`, pos: 'MF', baseRating: Number((startingXIRating / 10 + 0.3).toFixed(1)) },
-        { name: `${prefix} MF 8`, pos: 'MF', baseRating: Number((startingXIRating / 10 + 0.2).toFixed(1)) },
-        { name: `${prefix} FW 9`, pos: 'FW', baseRating: Number((startingXIRating / 10 + 0.5).toFixed(1)) },
-        { name: `${prefix} FW 10`, pos: 'FW', baseRating: Number((startingXIRating / 10 + 0.4).toFixed(1)) },
-        { name: `${prefix} FW 11`, pos: 'FW', baseRating: Number((startingXIRating / 10 + 0.2).toFixed(1)) },
-      ];
+      rating += K * (score - expected);
     }
-
-    const totalGoalsScored = stats.goalsScored || 15;
-    const players: PlayerContributionItem[] = rawSquad.map((p, index) => {
-      const isAttacker = p.pos === 'FW' || (p.pos === 'MF' && index >= 6);
-      const goals = isAttacker ? Math.max(1, Math.round(totalGoalsScored * (0.15 + (11 - index) * 0.02))) : 0;
-      const assists = p.pos === 'MF' ? Math.max(1, Math.round(totalGoalsScored * 0.12)) : isAttacker ? 2 : 0;
-      const contributionFactor = Number(
-        Math.min(0.35, (goals * 1.5 + assists) / Math.max(1, totalGoalsScored * 1.5)).toFixed(2)
-      );
-      const isKeyPlayer = p.baseRating >= 8.3 || contributionFactor >= 0.18;
-
-      return {
-        name: p.name,
-        position: p.pos,
-        rating: p.baseRating,
-        goals,
-        assists,
-        contributionFactor,
-        isKeyPlayer,
-      };
-    });
 
     return {
-      formation,
-      startingXIRating,
-      lineupStrengthFactor,
-      keyStartersPresent: 11,
-      players,
+      rating: Math.round(rating),
+      lastUpdated: new Date().toISOString().split('T')[0],
+      volatility: 10,
+      recentChange: 0,
     };
-  }
-
-  /**
-   * Player Contribution Measurement
-   */
-  public static computePlayerContributions(
-    _teamName: string,
-    _stats: TeamStatsSummary,
-    lineup: TeamLineupMeasurement
-  ): { topContributors: PlayerContributionItem[]; impactScore: number } {
-    const sorted = [...lineup.players].sort(
-      (a, b) => b.contributionFactor - a.contributionFactor || b.rating - a.rating
-    );
-    const topContributors = sorted.slice(0, 4);
-
-    const sumImpact = topContributors.reduce((acc, p) => acc + p.contributionFactor, 0);
-    const impactScore = Number(Math.max(0.95, Math.min(1.15, 0.98 + sumImpact * 0.18)).toFixed(3));
-
-    return { topContributors, impactScore };
   }
 
   /**
    * Generates a complete Poisson match probability prediction & expected goals
-   * integrating all 6 engine measurements: H2H, League Standing, This Year, Last Year, Lineup & Player Contribution
+   * integrating all engine measurements: H2H, League Standing, This Year, Last Year, Lineup & Elo Rating
    */
   public static predictMatch(
     homeTeam: string,
@@ -644,41 +502,32 @@ export class PoissonEngine {
     const lastYearHome = this.computeLastYearPerformance(homeTeam, leagueHistoricalMatches);
     const lastYearAway = this.computeLastYearPerformance(awayTeam, leagueHistoricalMatches);
 
-    // 5. Team Lineup Measurement
-    const lineupHome = this.computeTeamLineup(homeTeam, homeStats);
-    const lineupAway = this.computeTeamLineup(awayTeam, awayStats);
-
-    // 6. Player Contribution Measurement
-    const playerContribHome = this.computePlayerContributions(homeTeam, homeStats, lineupHome);
-    const playerContribAway = this.computePlayerContributions(awayTeam, awayStats, lineupAway);
+    // 5. Elo Rating Measurement
+    const eloHome = this.computeEloRating(homeTeam, leagueHistoricalMatches);
+    const eloAway = this.computeEloRating(awayTeam, leagueHistoricalMatches);
 
     const measurements: PredictionEngineMeasurements = {
       h2h,
       leagueStanding,
       thisYearPerformance: { home: thisYearHome, away: thisYearAway },
       lastYearPerformance: { home: lastYearHome, away: lastYearAway },
-      lineup: { home: lineupHome, away: lineupAway },
-      playerContribution: {
-        homeTopContributors: playerContribHome.topContributors,
-        awayTopContributors: playerContribAway.topContributors,
-        homeImpactScore: playerContribHome.impactScore,
-        awayImpactScore: playerContribAway.impactScore,
-      },
+      eloRating: { home: eloHome, away: eloAway },
       combinedWeights: {
-        h2hWeight: 0.15,
+        h2hWeight: 0.20,
         standingWeight: 0.20,
         thisYearWeight: 0.25,
         lastYearWeight: 0.15,
-        lineupWeight: 0.15,
-        playerContributionWeight: 0.10,
+        eloRatingWeight: 0.20,
       },
     };
 
     // Calculate integrated factors for Expected Goals (xG)
     const standingFactorHome = leagueStanding.standingAdvantageFactor;
     const standingFactorAway = Number((2.0 - standingFactorHome).toFixed(3));
+    const eloFactorHome = Number(Math.max(0.9, Math.min(1.1, 1 + (eloHome.rating - eloAway.rating) / 2000)).toFixed(3));
+    const eloFactorAway = Number(Math.max(0.9, Math.min(1.1, 1 - (eloHome.rating - eloAway.rating) / 2000)).toFixed(3));
 
-    // Expected Goals λ incorporating all 6 measurements
+    // Expected Goals λ incorporating available measurements
     let homeXG =
       homeStats.homeAttack *
       awayStats.awayDefense *
@@ -689,8 +538,7 @@ export class PoissonEngine {
       standingFactorHome *
       thisYearHome.performanceScore *
       lastYearHome.historicalBaselineFactor *
-      lineupHome.lineupStrengthFactor *
-      playerContribHome.impactScore;
+      eloFactorHome;
 
     let awayXG =
       awayStats.awayAttack *
@@ -701,8 +549,7 @@ export class PoissonEngine {
       standingFactorAway *
       thisYearAway.performanceScore *
       lastYearAway.historicalBaselineFactor *
-      lineupAway.lineupStrengthFactor *
-      playerContribAway.impactScore;
+      eloFactorAway;
 
     // Bounds check to avoid unrealistic extremes
     homeXG = Math.max(0.25, Math.min(4.5, homeXG));

@@ -14,7 +14,7 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
   onClose,
 }) => {
   const [activeMeasurementTab, setActiveMeasurementTab] = useState<
-    'H2H' | 'STANDING' | 'THIS_YEAR' | 'LAST_YEAR' | 'LINEUP' | 'PLAYERS'
+    'H2H' | 'STANDING' | 'THIS_YEAR' | 'LAST_YEAR' | 'ELO'
   >('H2H');
 
   if (!fixture || !fixture.prediction) return null;
@@ -35,27 +35,20 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
       home: PoissonEngine.computeLastYearPerformance(fixture.homeTeam, []),
       away: PoissonEngine.computeLastYearPerformance(fixture.awayTeam, []),
     },
-    lineup: {
-      home: PoissonEngine.computeTeamLineup(fixture.homeTeam, homeStats || ({} as any)),
-      away: PoissonEngine.computeTeamLineup(fixture.awayTeam, awayStats || ({} as any)),
-    },
-    playerContribution: {
-      homeTopContributors: [],
-      awayTopContributors: [],
-      homeImpactScore: 1.0,
-      awayImpactScore: 1.0,
+    eloRating: {
+      home: PoissonEngine.computeEloRating(fixture.homeTeam, []),
+      away: PoissonEngine.computeEloRating(fixture.awayTeam, []),
     },
     combinedWeights: {
-      h2hWeight: 0.15,
+      h2hWeight: 0.20,
       standingWeight: 0.20,
       thisYearWeight: 0.25,
       lastYearWeight: 0.15,
-      lineupWeight: 0.15,
-      playerContributionWeight: 0.10,
+      eloRatingWeight: 0.20,
     },
   };
 
-  const { h2h, leagueStanding, thisYearPerformance, lastYearPerformance, lineup, playerContribution } = measurements;
+  const { h2h, leagueStanding, thisYearPerformance, lastYearPerformance, eloRating } = measurements;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
@@ -214,28 +207,15 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
 
               <button
                 type="button"
-                onClick={() => setActiveMeasurementTab('LINEUP')}
+                onClick={() => setActiveMeasurementTab('ELO')}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                  activeMeasurementTab === 'LINEUP'
-                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Shield className="w-3 h-3 text-blue-500" />
-                <span>Lineup</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveMeasurementTab('PLAYERS')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                  activeMeasurementTab === 'PLAYERS'
+                  activeMeasurementTab === 'ELO'
                     ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Users className="w-3 h-3 text-rose-500" />
-                <span>Player Impact</span>
+                <span>Elo Rating</span>
               </button>
             </div>
 
@@ -455,120 +435,37 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
                 </div>
               )}
 
-              {/* 5. Team Lineup Tab */}
-              {activeMeasurementTab === 'LINEUP' && (
+              {/* 5. Elo Rating Tab */}
+              {activeMeasurementTab === 'ELO' && (
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                     <span className="font-bold text-slate-800 dark:text-slate-200">
-                      Team Formations &amp; Starting XI
-                    </span>
-                    <span className="font-mono text-[11px] text-slate-500">
-                      Tactical Shape Rating
+                      Elo Rating Analysis
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900 dark:text-white truncate">{fixture.homeTeam}</span>
-                        <span className="font-mono text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 px-1.5 py-0.2 rounded font-bold">
-                          {lineup.home.formation}
-                        </span>
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
+                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.homeTeam}</div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Rating:</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{measurements.eloRating.home.rating}</span>
                       </div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">XI Quality:</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{lineup.home.startingXIRating} pts</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">Strength Mult:</span>
-                        <span className="font-bold">x{lineup.home.lineupStrengthFactor}</span>
-                      </div>
-                      <div className="pt-1 border-t border-slate-200 dark:border-slate-800 space-y-0.5">
-                        <div className="text-[10px] text-slate-400 font-medium">Starting Core:</div>
-                        {lineup.home.players.slice(0, 4).map((p, idx) => (
-                          <div key={idx} className="flex justify-between text-[10px] font-mono">
-                            <span className="text-slate-700 dark:text-slate-300 truncate">{p.name} ({p.position})</span>
-                            <span className="font-bold text-emerald-600 dark:text-emerald-400">{p.rating}</span>
-                          </div>
-                        ))}
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Volatility:</span>
+                        <span className="font-bold">{measurements.eloRating.home.volatility}</span>
                       </div>
                     </div>
 
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900 dark:text-white truncate">{fixture.awayTeam}</span>
-                        <span className="font-mono text-[10px] bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-400 px-1.5 py-0.2 rounded font-bold">
-                          {lineup.away.formation}
-                        </span>
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
+                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.awayTeam}</div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Rating:</span>
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400">{measurements.eloRating.away.rating}</span>
                       </div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">XI Quality:</span>
-                        <span className="font-bold text-cyan-600 dark:text-cyan-400">{lineup.away.startingXIRating} pts</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">Strength Mult:</span>
-                        <span className="font-bold">x{lineup.away.lineupStrengthFactor}</span>
-                      </div>
-                      <div className="pt-1 border-t border-slate-200 dark:border-slate-800 space-y-0.5">
-                        <div className="text-[10px] text-slate-400 font-medium">Starting Core:</div>
-                        {lineup.away.players.slice(0, 4).map((p, idx) => (
-                          <div key={idx} className="flex justify-between text-[10px] font-mono">
-                            <span className="text-slate-700 dark:text-slate-300 truncate">{p.name} ({p.position})</span>
-                            <span className="font-bold text-cyan-600 dark:text-cyan-400">{p.rating}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 6. Player Contribution Tab */}
-              {activeMeasurementTab === 'PLAYERS' && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      Key Player Contribution
-                    </span>
-                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                      Home Impact: x{playerContribution.homeImpactScore} | Away Impact: x{playerContribution.awayImpactScore}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1">
-                      <div className="font-bold text-slate-900 dark:text-white truncate text-xs">{fixture.homeTeam} Contributors</div>
-                      <div className="space-y-1 pt-1">
-                        {playerContribution.homeTopContributors.map((p, idx) => (
-                          <div key={idx} className="p-1.5 rounded bg-white dark:bg-slate-950 shadow-2xs font-mono text-[10px] flex items-center justify-between">
-                            <div>
-                              <span className="font-bold text-slate-800 dark:text-slate-200">{p.name}</span>
-                              <span className="text-slate-400 ml-1">({p.position})</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{Math.round(p.contributionFactor * 100)}%</span>
-                              <span className="text-slate-400 ml-1">impact</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1">
-                      <div className="font-bold text-slate-900 dark:text-white truncate text-xs">{fixture.awayTeam} Contributors</div>
-                      <div className="space-y-1 pt-1">
-                        {playerContribution.awayTopContributors.map((p, idx) => (
-                          <div key={idx} className="p-1.5 rounded bg-white dark:bg-slate-950 shadow-2xs font-mono text-[10px] flex items-center justify-between">
-                            <div>
-                              <span className="font-bold text-slate-800 dark:text-slate-200">{p.name}</span>
-                              <span className="text-slate-400 ml-1">({p.position})</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-cyan-600 dark:text-cyan-400 font-bold">{Math.round(p.contributionFactor * 100)}%</span>
-                              <span className="text-slate-400 ml-1">impact</span>
-                            </div>
-                          </div>
-                        ))}
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Volatility:</span>
+                        <span className="font-bold">{measurements.eloRating.away.volatility}</span>
                       </div>
                     </div>
                   </div>
@@ -576,6 +473,59 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
               )}
             </div>
           </div>
+
+          {/* Match Information from Scraper if present */}
+          {(fixture.stage || (fixture.information && fixture.information.length > 0) || fixture.resultDetails) && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs space-y-2">
+              <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-300 uppercase tracking-wider">
+                Match Details
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono">
+                {fixture.stage && (
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Stage</span>
+                    <span className="font-bold text-slate-900 dark:text-white truncate block">{fixture.stage}</span>
+                  </div>
+                )}
+                {fixture.resultDetails?.regulationTime && (
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Regulation</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{fixture.resultDetails.regulationTime}</span>
+                  </div>
+                )}
+                {fixture.resultDetails?.penalties && (
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Penalties</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{fixture.resultDetails.penalties}</span>
+                  </div>
+                )}
+                {fixture.information?.map((info, idx) => (
+                  <div key={idx} className="p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{info.category}</span>
+                    <span className="font-bold text-slate-900 dark:text-white truncate block">{info.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Match Dynamic Statistics from Scraper if present */}
+          {fixture.statistics && fixture.statistics.length > 0 && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs space-y-2">
+              <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-300 uppercase tracking-wider">
+                Match Statistics
+              </h4>
+              <div className="space-y-1.5 text-xs font-mono">
+                {fixture.statistics.map((stat, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 w-16 text-left">{stat.homeValue}</span>
+                    <span className="text-slate-600 dark:text-slate-300 font-sans text-center flex-1">{stat.category}</span>
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400 w-16 text-right">{stat.awayValue}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Poisson 5x5 Heatmap Matrix */}
           <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs">
@@ -586,46 +536,48 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
             />
           </div>
 
-          {/* All Available Betting Markets */}
+          {/* Predicted Outcome Probabilities */}
           <div>
             <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-300 uppercase tracking-wider mb-2.5">
-              Available Betting Markets
+              Predicted Outcome Probabilities
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
-              {(fixture.markets || []).map((m) => (
-                <div
-                  key={m.key}
-                  className={`p-2.5 sm:p-3 rounded-2xl flex items-center justify-between transition-all shadow-xs ${
-                    m.isPositiveEV
-                      ? 'bg-emerald-50 dark:bg-emerald-950/30'
-                      : 'bg-slate-50 dark:bg-slate-900/60'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-semibold text-xs text-slate-900 dark:text-white">{m.name}</span>
-                      {m.isPositiveEV && (
-                        <span className="text-[9px] sm:text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.2 rounded-md shadow-2xs">
-                          +{(m.expectedValue * 100).toFixed(1)}% EV
-                        </span>
-                      )}
-                      {m.isBanker && (
-                        <span className="text-[9px] sm:text-[10px] font-bold text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/60 px-1.5 py-0.2 rounded-md shadow-2xs">
-                          Banker
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      Odds: <span className="text-slate-900 dark:text-white font-mono font-bold">{m.odds.toFixed(2)}</span> | AI Prob:{' '}
-                      <span className="text-slate-700 dark:text-slate-300 font-mono">{(m.probability * 100).toFixed(1)}%</span>
-                    </div>
-                  </div>
-
-                  <span className="font-mono font-bold text-xs text-slate-900 dark:text-emerald-400 bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs shrink-0">
-                    @{m.odds.toFixed(2)}
-                  </span>
-                </div>
-              ))}
+              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                <span className="font-semibold text-xs text-slate-900 dark:text-white">{fixture.homeTeam} Win</span>
+                <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
+                  {(pred.homeWinProb * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                <span className="font-semibold text-xs text-slate-900 dark:text-white">Draw</span>
+                <span className="font-mono font-bold text-xs text-amber-600 dark:text-amber-400 bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
+                  {(pred.drawProb * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                <span className="font-semibold text-xs text-slate-900 dark:text-white">{fixture.awayTeam} Win</span>
+                <span className="font-mono font-bold text-xs text-cyan-600 dark:text-cyan-400 bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
+                  {(pred.awayWinProb * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                <span className="font-semibold text-xs text-slate-900 dark:text-white">Over 2.5 Goals</span>
+                <span className="font-mono font-bold text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
+                  {(pred.over25Prob * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                <span className="font-semibold text-xs text-slate-900 dark:text-white">Both Teams to Score (BTTS)</span>
+                <span className="font-mono font-bold text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
+                  {(pred.bttsProb * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                <span className="font-semibold text-xs text-slate-900 dark:text-white">Over 1.5 Goals</span>
+                <span className="font-mono font-bold text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
+                  {(pred.over15Prob * 100).toFixed(1)}%
+                </span>
+              </div>
             </div>
           </div>
 

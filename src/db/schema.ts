@@ -222,8 +222,7 @@ export interface PredictionMeasurementsSchema {
   league_standing_json: string;
   this_year_performance_json: string;
   last_year_performance_json: string;
-  team_lineup_json: string;
-  player_contribution_json: string;
+  elo_rating_json: string;
   combined_weights_json: string;
   calculated_at: string;
 }
@@ -351,8 +350,7 @@ export const DDL_STATEMENTS = {
       league_standing_json TEXT NOT NULL,
       this_year_performance_json TEXT NOT NULL,
       last_year_performance_json TEXT NOT NULL,
-      team_lineup_json TEXT NOT NULL,
-      player_contribution_json TEXT NOT NULL,
+      elo_rating_json TEXT NOT NULL,
       combined_weights_json TEXT NOT NULL,
       calculated_at TEXT NOT NULL
     );

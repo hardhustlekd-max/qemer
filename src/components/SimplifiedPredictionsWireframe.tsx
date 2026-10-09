@@ -15,16 +15,12 @@ interface SimplifiedPredictionsWireframeProps {
   marketFilter?: 'BEST_VALUE' | 'OVER_UNDER' | '1X2' | 'BTTS';
 }
 
-function getTipLabel(fixture: Fixture, market: MarketOption): string {
-  const key = market.key;
-  if (key === 'HOME_WIN') return '1';
-  if (key === 'AWAY_WIN') return '2';
-  if (key === 'DRAW') return 'X';
-  if (key === 'DOUBLE_CHANCE_1X') return '1X';
-  if (key === 'DOUBLE_CHANCE_X2') return 'X2';
-  if (key === 'OVER_25') return '2.5+';
-  if (key === 'BTTS_YES') return 'BTTS';
-  return '1X2';
+function getTipLabel(fixture: Fixture): string {
+  const p = fixture.prediction;
+  if (!p) return '1X2';
+  if (p.homeWinProb >= p.awayWinProb && p.homeWinProb >= p.drawProb) return '1';
+  if (p.awayWinProb >= p.homeWinProb && p.awayWinProb >= p.drawProb) return '2';
+  return 'X';
 }
 
 export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWireframeProps> = ({
@@ -70,23 +66,6 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
     return Object.entries(map);
   }, [paginatedFixtures]);
 
-  const getSelectedMarket = (fixture: Fixture): MarketOption => {
-    const markets = fixture.markets || [];
-    if (fixture.bestValueMarket) return fixture.bestValueMarket;
-    return (
-      markets[0] || {
-        key: 'HOME_WIN',
-        name: 'Home Win',
-        odds: fixture.odds.homeWin || 1.85,
-        probability: 0.58,
-        impliedProb: 0.54,
-        expectedValue: 0.08,
-        isPositiveEV: true,
-        isBanker: false,
-      }
-    );
-  };
-
   return (
     <div className="w-full max-w-full bg-white dark:bg-[#0B0F17] rounded-3xl shadow-xs overflow-hidden text-slate-900 dark:text-slate-100 font-sans transition-all space-y-3 p-2 sm:p-3">
       {groupedByLeague.length === 0 ? (
@@ -111,21 +90,20 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
             {/* League Matches Table Rows */}
             <div className="divide-y divide-slate-100 dark:divide-slate-800/40 bg-white dark:bg-[#0B0F17]">
               {leagueFixtures.map((fixture) => {
-                const market = getSelectedMarket(fixture);
-                const tipLabel = getTipLabel(fixture, market);
+                const tipLabel = getTipLabel(fixture);
                 const kickOff = fixture.kickOffTime || '19:00';
 
                 const homeProb = fixture.prediction?.homeWinProb !== undefined
                   ? Math.round(fixture.prediction.homeWinProb * 100)
-                  : Math.round((1 / (fixture.odds.homeWin || 2.0)) * 100);
+                  : 45;
 
                 const drawProb = fixture.prediction?.drawProb !== undefined
                   ? Math.round(fixture.prediction.drawProb * 100)
-                  : Math.round((1 / (fixture.odds.draw || 3.4)) * 100);
+                  : 28;
 
                 const awayProb = fixture.prediction?.awayWinProb !== undefined
                   ? Math.round(fixture.prediction.awayWinProb * 100)
-                  : Math.round((1 / (fixture.odds.awayWin || 3.5)) * 100);
+                  : 27;
 
                 return (
                   <div
