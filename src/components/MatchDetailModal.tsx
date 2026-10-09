@@ -1,7 +1,8 @@
-import React from 'react';
-import { X, TrendingUp, BarChart2, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, TrendingUp, BarChart2, Zap, History, Trophy, Calendar, Users, Award, Shield } from 'lucide-react';
 import { Fixture } from '../core/types.js';
 import { PoissonMatrixView } from './PoissonMatrixView.js';
+import { PoissonEngine } from '../core/poisson.js';
 
 interface MatchDetailModalProps {
   fixture: Fixture | null;
@@ -12,11 +13,49 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
   fixture,
   onClose,
 }) => {
+  const [activeMeasurementTab, setActiveMeasurementTab] = useState<
+    'H2H' | 'STANDING' | 'THIS_YEAR' | 'LAST_YEAR' | 'LINEUP' | 'PLAYERS'
+  >('H2H');
+
   if (!fixture || !fixture.prediction) return null;
 
   const pred = fixture.prediction;
   const homeStats = fixture.homeStats;
   const awayStats = fixture.awayStats;
+
+  // Retrieve computed measurements or derive fallback
+  const measurements = pred.measurements || {
+    h2h: PoissonEngine.computeHeadToHead(fixture.homeTeam, fixture.awayTeam, []),
+    leagueStanding: PoissonEngine.computeLeagueStanding(fixture.homeTeam, fixture.awayTeam, []),
+    thisYearPerformance: {
+      home: PoissonEngine.computeSeasonPerformance(fixture.homeTeam, []),
+      away: PoissonEngine.computeSeasonPerformance(fixture.awayTeam, []),
+    },
+    lastYearPerformance: {
+      home: PoissonEngine.computeLastYearPerformance(fixture.homeTeam, []),
+      away: PoissonEngine.computeLastYearPerformance(fixture.awayTeam, []),
+    },
+    lineup: {
+      home: PoissonEngine.computeTeamLineup(fixture.homeTeam, homeStats || ({} as any)),
+      away: PoissonEngine.computeTeamLineup(fixture.awayTeam, awayStats || ({} as any)),
+    },
+    playerContribution: {
+      homeTopContributors: [],
+      awayTopContributors: [],
+      homeImpactScore: 1.0,
+      awayImpactScore: 1.0,
+    },
+    combinedWeights: {
+      h2hWeight: 0.15,
+      standingWeight: 0.20,
+      thisYearWeight: 0.25,
+      lastYearWeight: 0.15,
+      lineupWeight: 0.15,
+      playerContributionWeight: 0.10,
+    },
+  };
+
+  const { h2h, leagueStanding, thisYearPerformance, lastYearPerformance, lineup, playerContribution } = measurements;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
@@ -77,12 +116,12 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
               </div>
               <div className="flex items-center justify-around font-mono mt-2">
                 <div className="text-center">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Home λ: </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Home: </span>
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">{pred.homeXG}</span>
                 </div>
                 <div className="text-slate-400 dark:text-slate-600 font-bold">:</div>
                 <div className="text-center">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Away λ: </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Away: </span>
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">{pred.awayXG}</span>
                 </div>
               </div>
@@ -104,6 +143,437 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
                   <span className="font-bold text-slate-900 dark:text-slate-200">{(pred.bttsProb * 100).toFixed(1)}%</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Prediction Engine Measurements Section */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Prediction Engine Measurements</span>
+              </h4>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                Integrated Multi-Factor Model
+              </span>
+            </div>
+
+            {/* Measurement Sub-Tabs */}
+            <div className="flex items-center bg-white dark:bg-slate-950 p-1 rounded-xl shadow-xs overflow-x-auto no-scrollbar gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveMeasurementTab('H2H')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  activeMeasurementTab === 'H2H'
+                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <History className="w-3 h-3 text-emerald-500" />
+                <span>H2H</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMeasurementTab('STANDING')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  activeMeasurementTab === 'STANDING'
+                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Trophy className="w-3 h-3 text-amber-500" />
+                <span>Standing</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMeasurementTab('THIS_YEAR')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  activeMeasurementTab === 'THIS_YEAR'
+                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Calendar className="w-3 h-3 text-cyan-500" />
+                <span>This Year</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMeasurementTab('LAST_YEAR')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  activeMeasurementTab === 'LAST_YEAR'
+                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Award className="w-3 h-3 text-violet-500" />
+                <span>Last Year</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMeasurementTab('LINEUP')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  activeMeasurementTab === 'LINEUP'
+                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Shield className="w-3 h-3 text-blue-500" />
+                <span>Lineup</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMeasurementTab('PLAYERS')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                  activeMeasurementTab === 'PLAYERS'
+                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Users className="w-3 h-3 text-rose-500" />
+                <span>Player Impact</span>
+              </button>
+            </div>
+
+            {/* Active Measurement Content */}
+            <div className="bg-white dark:bg-slate-950 p-3 sm:p-4 rounded-xl shadow-xs text-xs space-y-2.5">
+              {/* 1. Head to Head Tab */}
+              {activeMeasurementTab === 'H2H' && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      Head to Head Record ({h2h.matchesCount} meetings)
+                    </span>
+                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      Home Mult: x{h2h.h2hMultiplierHome} | Away Mult: x{h2h.h2hMultiplierAway}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center font-mono py-1">
+                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{fixture.homeTeam} Wins</div>
+                      <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{h2h.homeWins}</div>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">Draws</div>
+                      <div className="text-sm font-bold text-amber-600 dark:text-amber-400">{h2h.draws}</div>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{fixture.awayTeam} Wins</div>
+                      <div className="text-sm font-bold text-cyan-600 dark:text-cyan-400">{h2h.awayWins}</div>
+                    </div>
+                  </div>
+
+                  {h2h.recentH2H.length > 0 && (
+                    <div className="pt-1 space-y-1">
+                      <div className="text-[10px] text-slate-400 font-medium">Recent Encounters:</div>
+                      {h2h.recentH2H.map((r, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-slate-300">
+                          <span className="text-slate-400">{r.date}</span>
+                          <span className="font-semibold">{r.homeTeam} vs {r.awayTeam}</span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">{r.score}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 2. League Standing Tab */}
+              {activeMeasurementTab === 'STANDING' && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      League Table Standing
+                    </span>
+                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      Advantage Factor: x{leagueStanding.standingAdvantageFactor}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1">
+                      <div className="font-bold text-slate-900 dark:text-white truncate">{fixture.homeTeam}</div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">Table Position:</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{leagueStanding.homeRank} of {leagueStanding.totalTeams}</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">Points:</span>
+                        <span className="font-bold">{leagueStanding.homePoints} pts</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">Goal Difference:</span>
+                        <span className="font-bold">{leagueStanding.homeGoalDiff > 0 ? `+${leagueStanding.homeGoalDiff}` : leagueStanding.homeGoalDiff}</span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1">
+                      <div className="font-bold text-slate-900 dark:text-white truncate">{fixture.awayTeam}</div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">Table Position:</span>
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400">{leagueStanding.awayRank} of {leagueStanding.totalTeams}</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">Points:</span>
+                        <span className="font-bold">{leagueStanding.awayPoints} pts</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">Goal Difference:</span>
+                        <span className="font-bold">{leagueStanding.awayGoalDiff > 0 ? `+${leagueStanding.awayGoalDiff}` : leagueStanding.awayGoalDiff}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Performance of This Year Tab */}
+              {activeMeasurementTab === 'THIS_YEAR' && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      Current Year Performance
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-500">
+                      Season 2024–2026 Record
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
+                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.homeTeam}</div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Win Rate:</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{Math.round(thisYearPerformance.home.winRate * 100)}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Points Per Game:</span>
+                        <span className="font-bold">{thisYearPerformance.home.pointsPerGame}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Goals Scored:</span>
+                        <span className="font-bold">{thisYearPerformance.home.goalsPerGame} per game</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Clean Sheet Rate:</span>
+                        <span className="font-bold">{Math.round(thisYearPerformance.home.cleanSheetRate * 100)}%</span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-500">Performance Score:</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">x{thisYearPerformance.home.performanceScore}</span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
+                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.awayTeam}</div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Win Rate:</span>
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400">{Math.round(thisYearPerformance.away.winRate * 100)}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Points Per Game:</span>
+                        <span className="font-bold">{thisYearPerformance.away.pointsPerGame}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Goals Scored:</span>
+                        <span className="font-bold">{thisYearPerformance.away.goalsPerGame} per game</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Clean Sheet Rate:</span>
+                        <span className="font-bold">{Math.round(thisYearPerformance.away.cleanSheetRate * 100)}%</span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-500">Performance Score:</span>
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400">x{thisYearPerformance.away.performanceScore}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. Performance of Last Year Tab */}
+              {activeMeasurementTab === 'LAST_YEAR' && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      Last Year Baseline &amp; Progression
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-500">
+                      Historical Continuity Factor
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
+                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.homeTeam}</div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Last Year Rank:</span>
+                        <span className="font-bold">{lastYearPerformance.home.lastYearRank}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Last Year Win Rate:</span>
+                        <span className="font-bold">{Math.round(lastYearPerformance.home.lastYearWinRate * 100)}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">YoY Progression:</span>
+                        <span className={`font-bold ${lastYearPerformance.home.yearOverYearProgression >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                          {lastYearPerformance.home.yearOverYearProgression >= 0 ? '+' : ''}{(lastYearPerformance.home.yearOverYearProgression * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-500">Baseline Multiplier:</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">x{lastYearPerformance.home.historicalBaselineFactor}</span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
+                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.awayTeam}</div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Last Year Rank:</span>
+                        <span className="font-bold">{lastYearPerformance.away.lastYearRank}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Last Year Win Rate:</span>
+                        <span className="font-bold">{Math.round(lastYearPerformance.away.lastYearWinRate * 100)}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">YoY Progression:</span>
+                        <span className={`font-bold ${lastYearPerformance.away.yearOverYearProgression >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
+                          {lastYearPerformance.away.yearOverYearProgression >= 0 ? '+' : ''}{(lastYearPerformance.away.yearOverYearProgression * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-500">Baseline Multiplier:</span>
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400">x{lastYearPerformance.away.historicalBaselineFactor}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. Team Lineup Tab */}
+              {activeMeasurementTab === 'LINEUP' && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      Team Formations &amp; Starting XI
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-500">
+                      Tactical Shape Rating
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900 dark:text-white truncate">{fixture.homeTeam}</span>
+                        <span className="font-mono text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 px-1.5 py-0.2 rounded font-bold">
+                          {lineup.home.formation}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">XI Quality:</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{lineup.home.startingXIRating} pts</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">Strength Mult:</span>
+                        <span className="font-bold">x{lineup.home.lineupStrengthFactor}</span>
+                      </div>
+                      <div className="pt-1 border-t border-slate-200 dark:border-slate-800 space-y-0.5">
+                        <div className="text-[10px] text-slate-400 font-medium">Starting Core:</div>
+                        {lineup.home.players.slice(0, 4).map((p, idx) => (
+                          <div key={idx} className="flex justify-between text-[10px] font-mono">
+                            <span className="text-slate-700 dark:text-slate-300 truncate">{p.name} ({p.position})</span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400">{p.rating}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900 dark:text-white truncate">{fixture.awayTeam}</span>
+                        <span className="font-mono text-[10px] bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-400 px-1.5 py-0.2 rounded font-bold">
+                          {lineup.away.formation}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">XI Quality:</span>
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400">{lineup.away.startingXIRating} pts</span>
+                      </div>
+                      <div className="flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">Strength Mult:</span>
+                        <span className="font-bold">x{lineup.away.lineupStrengthFactor}</span>
+                      </div>
+                      <div className="pt-1 border-t border-slate-200 dark:border-slate-800 space-y-0.5">
+                        <div className="text-[10px] text-slate-400 font-medium">Starting Core:</div>
+                        {lineup.away.players.slice(0, 4).map((p, idx) => (
+                          <div key={idx} className="flex justify-between text-[10px] font-mono">
+                            <span className="text-slate-700 dark:text-slate-300 truncate">{p.name} ({p.position})</span>
+                            <span className="font-bold text-cyan-600 dark:text-cyan-400">{p.rating}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 6. Player Contribution Tab */}
+              {activeMeasurementTab === 'PLAYERS' && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      Key Player Contribution
+                    </span>
+                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      Home Impact: x{playerContribution.homeImpactScore} | Away Impact: x{playerContribution.awayImpactScore}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1">
+                      <div className="font-bold text-slate-900 dark:text-white truncate text-xs">{fixture.homeTeam} Contributors</div>
+                      <div className="space-y-1 pt-1">
+                        {playerContribution.homeTopContributors.map((p, idx) => (
+                          <div key={idx} className="p-1.5 rounded bg-white dark:bg-slate-950 shadow-2xs font-mono text-[10px] flex items-center justify-between">
+                            <div>
+                              <span className="font-bold text-slate-800 dark:text-slate-200">{p.name}</span>
+                              <span className="text-slate-400 ml-1">({p.position})</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{Math.round(p.contributionFactor * 100)}%</span>
+                              <span className="text-slate-400 ml-1">impact</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1">
+                      <div className="font-bold text-slate-900 dark:text-white truncate text-xs">{fixture.awayTeam} Contributors</div>
+                      <div className="space-y-1 pt-1">
+                        {playerContribution.awayTopContributors.map((p, idx) => (
+                          <div key={idx} className="p-1.5 rounded bg-white dark:bg-slate-950 shadow-2xs font-mono text-[10px] flex items-center justify-between">
+                            <div>
+                              <span className="font-bold text-slate-800 dark:text-slate-200">{p.name}</span>
+                              <span className="text-slate-400 ml-1">({p.position})</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-cyan-600 dark:text-cyan-400 font-bold">{Math.round(p.contributionFactor * 100)}%</span>
+                              <span className="text-slate-400 ml-1">impact</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

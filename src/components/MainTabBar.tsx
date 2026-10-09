@@ -3,8 +3,8 @@ import { Filter, ChevronDown, Search } from 'lucide-react';
 import { GLOBAL_LEAGUES_DATASET } from '../core/globalLeaguesDataset.js';
 
 interface MainTabBarProps {
-  activeTab: 'FIXTURES' | 'ACCAS' | 'TIPS';
-  onSelectTab: (tab: 'FIXTURES' | 'ACCAS' | 'TIPS') => void;
+  activeTab: 'FIXTURES' | 'ACCAS';
+  onSelectTab: (tab: 'FIXTURES' | 'ACCAS') => void;
   selectedLeague: string;
   onSelectLeague: (league: string) => void;
   dateFilter: string;
@@ -58,7 +58,7 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
   return (
     <div className="bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shadow-xs transition-colors relative z-50">
       <div className="max-w-5xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-3">
-        {/* Left tabs: Predictions, Accumulator, Trends */}
+        {/* Left tabs: Predictions, Accumulator */}
         <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl shadow-xs shrink-0 overflow-x-auto no-scrollbar">
           <button
             id="tab-fixtures-btn"
@@ -84,19 +84,6 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
             }`}
           >
             Accumulator
-          </button>
-
-          <button
-            id="tab-tips-btn"
-            type="button"
-            onClick={() => onSelectTab('TIPS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'TIPS'
-                ? 'bg-white dark:bg-emerald-600 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            Trends
           </button>
         </div>
 

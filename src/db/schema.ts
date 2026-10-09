@@ -131,6 +131,14 @@ export interface AppThemeConfigSchema {
   updated_at: string;
 }
 
+export type MatchListScopeType = 'UPCOMING' | 'LIVE' | 'HISTORY';
+
+export interface MatchListScopeConfigSchema {
+  active_scope: MatchListScopeType;
+  available_scopes: MatchListScopeType[];
+  inplay_bar_removed: boolean;
+}
+
 export interface NavigationBarLayoutSchema {
   tabs_placement: 'UNDER_LIVE_MATCHES_BAR';
   active_tabs: ('FIXTURES' | 'ACCAS' | 'TIPS')[];
@@ -206,6 +214,18 @@ export interface FootballTipsCacheSchema {
   raw_markdown: string;
   sources_json: string;
   updated_at: string; // ISO timestamp
+}
+
+export interface PredictionMeasurementsSchema {
+  fixture_id: string; // Primary Key
+  h2h_json: string;
+  league_standing_json: string;
+  this_year_performance_json: string;
+  last_year_performance_json: string;
+  team_lineup_json: string;
+  player_contribution_json: string;
+  combined_weights_json: string;
+  calculated_at: string;
 }
 
 export const DDL_STATEMENTS = {
@@ -323,5 +343,19 @@ export const DDL_STATEMENTS = {
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_prebuilt_cache_scope ON prebuilt_accumulators_cache(date_scope);
+  `,
+  createPredictionMeasurementsCache: `
+    CREATE TABLE IF NOT EXISTS prediction_measurements_cache (
+      fixture_id TEXT PRIMARY KEY,
+      h2h_json TEXT NOT NULL,
+      league_standing_json TEXT NOT NULL,
+      this_year_performance_json TEXT NOT NULL,
+      last_year_performance_json TEXT NOT NULL,
+      team_lineup_json TEXT NOT NULL,
+      player_contribution_json TEXT NOT NULL,
+      combined_weights_json TEXT NOT NULL,
+      calculated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pred_measurements_fixture ON prediction_measurements_cache(fixture_id);
   `,
 };

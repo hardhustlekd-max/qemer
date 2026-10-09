@@ -54,6 +54,107 @@ export interface CorrectScoreProb {
   probability: number;
 }
 
+export interface HeadToHeadMatchRecord {
+  date: string;
+  homeTeam: string;
+  awayTeam: string;
+  score: string;
+  winner: 'HOME' | 'AWAY' | 'DRAW';
+}
+
+export interface HeadToHeadMeasurement {
+  matchesCount: number;
+  homeWins: number;
+  draws: number;
+  awayWins: number;
+  homeGoalsAvg: number;
+  awayGoalsAvg: number;
+  h2hMultiplierHome: number;
+  h2hMultiplierAway: number;
+  recentH2H: HeadToHeadMatchRecord[];
+}
+
+export interface LeagueStandingMeasurement {
+  homeRank: number;
+  awayRank: number;
+  totalTeams: number;
+  homePoints: number;
+  awayPoints: number;
+  homeGoalDiff: number;
+  awayGoalDiff: number;
+  standingAdvantageFactor: number;
+}
+
+export interface SeasonPerformanceMeasurement {
+  matchesPlayed: number;
+  winRate: number;
+  drawRate: number;
+  lossRate: number;
+  pointsPerGame: number;
+  goalsPerGame: number;
+  concededPerGame: number;
+  cleanSheetRate: number;
+  performanceScore: number;
+}
+
+export interface LastYearPerformanceMeasurement {
+  lastYearRank: number;
+  lastYearPoints: number;
+  lastYearWinRate: number;
+  lastYearGoalsPerGame: number;
+  yearOverYearProgression: number;
+  historicalBaselineFactor: number;
+}
+
+export interface PlayerContributionItem {
+  name: string;
+  position: 'GK' | 'DF' | 'MF' | 'FW';
+  rating: number;
+  goals: number;
+  assists: number;
+  contributionFactor: number;
+  isKeyPlayer: boolean;
+}
+
+export interface TeamLineupMeasurement {
+  formation: string;
+  startingXIRating: number;
+  lineupStrengthFactor: number;
+  keyStartersPresent: number;
+  players: PlayerContributionItem[];
+}
+
+export interface PredictionEngineMeasurements {
+  h2h: HeadToHeadMeasurement;
+  leagueStanding: LeagueStandingMeasurement;
+  thisYearPerformance: {
+    home: SeasonPerformanceMeasurement;
+    away: SeasonPerformanceMeasurement;
+  };
+  lastYearPerformance: {
+    home: LastYearPerformanceMeasurement;
+    away: LastYearPerformanceMeasurement;
+  };
+  lineup: {
+    home: TeamLineupMeasurement;
+    away: TeamLineupMeasurement;
+  };
+  playerContribution: {
+    homeTopContributors: PlayerContributionItem[];
+    awayTopContributors: PlayerContributionItem[];
+    homeImpactScore: number;
+    awayImpactScore: number;
+  };
+  combinedWeights: {
+    h2hWeight: number;
+    standingWeight: number;
+    thisYearWeight: number;
+    lastYearWeight: number;
+    lineupWeight: number;
+    playerContributionWeight: number;
+  };
+}
+
 export interface TeamFormMatch {
   date: string;
   opponent: string;
@@ -97,6 +198,7 @@ export interface PoissonPrediction {
   homeFormMultiplier: number;
   awayFormMultiplier: number;
   probabilityMatrix: number[][]; // 5x5 score matrix
+  measurements?: PredictionEngineMeasurements;
 }
 
 export interface Fixture {
@@ -118,6 +220,8 @@ export interface Fixture {
   homeStats?: TeamStatsSummary;
   awayStats?: TeamStatsSummary;
   score?: { home: number; away: number };
+  minute?: number;
+  measurements?: PredictionEngineMeasurements;
 }
 
 export interface AccaLeg {

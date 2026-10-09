@@ -72,9 +72,15 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
             )}
           </div>
 
-          {/* VS Divider & Probabilities */}
+          {/* VS Divider or Match Score */}
           <div className="col-span-2 flex flex-col items-center justify-center">
-            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">VS</span>
+            {fixture.score && fixture.score.home !== undefined ? (
+              <span className="text-xs sm:text-sm font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                {fixture.score.home}:{fixture.score.away}
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">VS</span>
+            )}
             <button
               onClick={() => onSelectDetail(fixture)}
               className="mt-0.5 text-[10px] text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-0.5 transition-colors cursor-pointer"

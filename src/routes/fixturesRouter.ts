@@ -74,6 +74,7 @@ fixturesRouter.get('/', async (req, res) => {
         bestValueMarket,
         homeStats,
         awayStats,
+        measurements: prediction.measurements,
       };
     });
 
@@ -109,6 +110,25 @@ fixturesRouter.get('/', async (req, res) => {
   } catch (err: any) {
     console.error('Error fetching fixtures:', err);
     res.status(500).json({ success: false, error: err?.message || 'Failed to fetch fixtures' });
+  }
+});
+
+fixturesRouter.get('/history', async (req, res) => {
+  try {
+    const league = req.query.league as string | undefined;
+    const limit = parseInt((req.query.limit as string) || '300', 10);
+    const matches = league && league !== 'ALL'
+      ? db.getLeagueHistoricalMatches(league, limit)
+      : db.getAllHistoricalMatches(limit);
+
+    res.json({
+      success: true,
+      count: matches.length,
+      matches,
+    });
+  } catch (err: any) {
+    console.error('Error fetching historical matches:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Failed to fetch history' });
   }
 });
 
@@ -169,6 +189,7 @@ fixturesRouter.get('/:id', async (req, res) => {
         homeStats,
         awayStats,
         h2hMatches,
+        measurements: prediction.measurements,
       },
     });
   } catch (err: any) {

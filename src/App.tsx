@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from './components/Header.js';
-import { LiveScoresTicker } from './components/LiveScoresTicker.js';
 import { MainTabBar } from './components/MainTabBar.js';
 import { FixturesList } from './components/FixturesList.js';
 import { PrebuiltAccumulators } from './components/PrebuiltAccumulators.js';
-import { TipsSection } from './components/TipsSection.js';
 import { MatchDetailModal } from './components/MatchDetailModal.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import {
   Fixture,
   EngineSettings,
   ProviderStatus,
-  TrendingTipsData,
 } from './core/types.js';
 import { LiveScore } from './providers/types.js';
 import { EngineService } from './services/engineService.js';
@@ -23,7 +20,7 @@ export default function App() {
     if (saved === 'dark' || saved === 'light') return saved;
     return 'light';
   });
-  const [activeTab, setActiveTab] = useState<'FIXTURES' | 'ACCAS' | 'TIPS'>('FIXTURES');
+  const [activeTab, setActiveTab] = useState<'FIXTURES' | 'ACCAS'>('FIXTURES');
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [isLoadingFixtures, setIsLoadingFixtures] = useState<boolean>(true);
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
@@ -32,11 +29,6 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'WIREFRAME' | 'CARDS'>('WIREFRAME');
   const [isLeagueModalOpen, setIsLeagueModalOpen] = useState<boolean>(false);
-
-  // Grounded Trending Tips state
-  const [tipsData, setTipsData] = useState<TrendingTipsData | null>(null);
-  const [isLoadingTips, setIsLoadingTips] = useState<boolean>(false);
-  const [isRefreshingTips, setIsRefreshingTips] = useState<boolean>(false);
 
   const [settings, setSettings] = useState<EngineSettings | null>(null);
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
@@ -91,30 +83,6 @@ export default function App() {
     }
   }, []);
 
-  const fetchTips = useCallback(async (forceRefresh = false) => {
-    try {
-      if (forceRefresh) {
-        setIsRefreshingTips(true);
-        const data = await EngineService.refreshTrendingTips();
-        if (data) {
-          setTipsData(data);
-          showNotification('Updated latest Google Search grounded football trends!');
-        }
-      } else {
-        setIsLoadingTips(true);
-        const data = await EngineService.getTrendingTips();
-        if (data) {
-          setTipsData(data);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to fetch tips:', e);
-    } finally {
-      setIsLoadingTips(false);
-      setIsRefreshingTips(false);
-    }
-  }, []);
-
   const fetchSettingsAndProviders = useCallback(async () => {
     try {
       const [sData, pData, statsData] = await Promise.all([
@@ -143,7 +111,6 @@ export default function App() {
   useEffect(() => {
     fetchSettingsAndProviders();
     fetchFixtures('ALL');
-    fetchTips(false);
     fetchLiveScores();
 
     const interval = setInterval(fetchLiveScores, 15000);
@@ -217,10 +184,7 @@ export default function App() {
         onToggleTheme={toggleTheme}
       />
 
-      {/* Live In-Play Scores Ticker */}
-      <LiveScoresTicker liveScores={liveScores} />
-
-      {/* Main Tab Bar Placed Under Live Matches Bar */}
+      {/* Main Tab Bar */}
       <MainTabBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -242,6 +206,7 @@ export default function App() {
         {activeTab === 'FIXTURES' && (
           <FixturesList
             fixtures={fixtures}
+            liveScores={liveScores}
             isLoading={isLoadingFixtures}
             onSelectDetail={(f) => setSelectedDetailFixture(f)}
             selectedLeague={selectedLeague}
@@ -264,15 +229,6 @@ export default function App() {
             fixtures={fixtures}
             settings={settings}
             onSelectDetail={(f) => setSelectedDetailFixture(f)}
-          />
-        )}
-
-        {activeTab === 'TIPS' && (
-          <TipsSection
-            tipsData={tipsData}
-            isLoading={isLoadingTips}
-            isRefreshing={isRefreshingTips}
-            onRefresh={() => fetchTips(true)}
           />
         )}
       </main>
