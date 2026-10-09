@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { X, TrendingUp, BarChart2, Zap, History, Trophy, Calendar, Users, Award, Shield } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, TrendingUp, BarChart2, Zap, History, Activity } from 'lucide-react';
 import { Fixture } from '../core/types.js';
 import { PoissonMatrixView } from './PoissonMatrixView.js';
 import { PoissonEngine } from '../core/poisson.js';
+import { parseDynamicStatistics, StatCategoryGroup } from '../core/statisticsParser.js';
 
 interface MatchDetailModalProps {
   fixture: Fixture | null;
@@ -13,42 +14,40 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
   fixture,
   onClose,
 }) => {
-  const [activeMeasurementTab, setActiveMeasurementTab] = useState<
-    'H2H' | 'STANDING' | 'THIS_YEAR' | 'LAST_YEAR' | 'ELO'
-  >('H2H');
-
   if (!fixture || !fixture.prediction) return null;
+  return <MatchDetailModalContent fixture={fixture} onClose={onClose} />;
+};
 
-  const pred = fixture.prediction;
+const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void }> = ({
+  fixture,
+  onClose,
+}) => {
+  const [statFilterGroup, setStatFilterGroup] = useState<StatCategoryGroup>('ALL');
+
+  const pred = fixture.prediction!;
   const homeStats = fixture.homeStats;
   const awayStats = fixture.awayStats;
 
-  // Retrieve computed measurements or derive fallback
+  // Retrieve computed measurements or derive fallback from scraped match records
   const measurements = pred.measurements || {
     h2h: PoissonEngine.computeHeadToHead(fixture.homeTeam, fixture.awayTeam, []),
-    leagueStanding: PoissonEngine.computeLeagueStanding(fixture.homeTeam, fixture.awayTeam, []),
-    thisYearPerformance: {
-      home: PoissonEngine.computeSeasonPerformance(fixture.homeTeam, []),
-      away: PoissonEngine.computeSeasonPerformance(fixture.awayTeam, []),
-    },
-    lastYearPerformance: {
-      home: PoissonEngine.computeLastYearPerformance(fixture.homeTeam, []),
-      away: PoissonEngine.computeLastYearPerformance(fixture.awayTeam, []),
-    },
-    eloRating: {
-      home: PoissonEngine.computeEloRating(fixture.homeTeam, []),
-      away: PoissonEngine.computeEloRating(fixture.awayTeam, []),
-    },
-    combinedWeights: {
-      h2hWeight: 0.20,
-      standingWeight: 0.20,
-      thisYearWeight: 0.25,
-      lastYearWeight: 0.15,
-      eloRatingWeight: 0.20,
-    },
   };
 
-  const { h2h, leagueStanding, thisYearPerformance, lastYearPerformance, eloRating } = measurements;
+  const { h2h } = measurements;
+
+  // Dynamically parse real statistics from Flashscore scraper
+  const rawStatistics = useMemo(() => {
+    return fixture.statistics || [];
+  }, [fixture.statistics]);
+
+  const parsedStatsSummary = useMemo(() => {
+    return parseDynamicStatistics(rawStatistics);
+  }, [rawStatistics]);
+
+  const filteredStatItems = useMemo(() => {
+    if (statFilterGroup === 'ALL') return parsedStatsSummary.items;
+    return parsedStatsSummary.items.filter((item) => item.group === statFilterGroup);
+  }, [parsedStatsSummary, statFilterGroup]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
@@ -139,336 +138,53 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Prediction Engine Measurements Section */}
+          {/* Head to Head Record from Scraped Matches */}
           <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Prediction Engine Measurements</span>
+                <History className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Head to Head Record</span>
               </h4>
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                Integrated Multi-Factor Model
+                {h2h.matchesCount} Previous Encounters
               </span>
             </div>
 
-            {/* Measurement Sub-Tabs */}
-            <div className="flex items-center bg-white dark:bg-slate-950 p-1 rounded-xl shadow-xs overflow-x-auto no-scrollbar gap-1">
-              <button
-                type="button"
-                onClick={() => setActiveMeasurementTab('H2H')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                  activeMeasurementTab === 'H2H'
-                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <History className="w-3 h-3 text-emerald-500" />
-                <span>H2H</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveMeasurementTab('STANDING')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                  activeMeasurementTab === 'STANDING'
-                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Trophy className="w-3 h-3 text-amber-500" />
-                <span>Standing</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveMeasurementTab('THIS_YEAR')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                  activeMeasurementTab === 'THIS_YEAR'
-                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Calendar className="w-3 h-3 text-cyan-500" />
-                <span>This Year</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveMeasurementTab('LAST_YEAR')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                  activeMeasurementTab === 'LAST_YEAR'
-                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Award className="w-3 h-3 text-violet-500" />
-                <span>Last Year</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveMeasurementTab('ELO')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
-                  activeMeasurementTab === 'ELO'
-                    ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Users className="w-3 h-3 text-rose-500" />
-                <span>Elo Rating</span>
-              </button>
-            </div>
-
-            {/* Active Measurement Content */}
             <div className="bg-white dark:bg-slate-950 p-3 sm:p-4 rounded-xl shadow-xs text-xs space-y-2.5">
-              {/* 1. Head to Head Tab */}
-              {activeMeasurementTab === 'H2H' && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      Head to Head Record ({h2h.matchesCount} meetings)
-                    </span>
-                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                      Home Mult: x{h2h.h2hMultiplierHome} | Away Mult: x{h2h.h2hMultiplierAway}
-                    </span>
-                  </div>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                <span className="font-bold text-slate-800 dark:text-slate-200">
+                  Direct H2H Match History
+                </span>
+                <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                  Home: x{h2h.h2hMultiplierHome} • Away: x{h2h.h2hMultiplierAway}
+                </span>
+              </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-center font-mono py-1">
-                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{fixture.homeTeam} Wins</div>
-                      <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{h2h.homeWins}</div>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400">Draws</div>
-                      <div className="text-sm font-bold text-amber-600 dark:text-amber-400">{h2h.draws}</div>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{fixture.awayTeam} Wins</div>
-                      <div className="text-sm font-bold text-cyan-600 dark:text-cyan-400">{h2h.awayWins}</div>
-                    </div>
-                  </div>
-
-                  {h2h.recentH2H.length > 0 && (
-                    <div className="pt-1 space-y-1">
-                      <div className="text-[10px] text-slate-400 font-medium">Recent Encounters:</div>
-                      {h2h.recentH2H.map((r, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-slate-300">
-                          <span className="text-slate-400">{r.date}</span>
-                          <span className="font-semibold">{r.homeTeam} vs {r.awayTeam}</span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">{r.score}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              <div className="grid grid-cols-3 gap-2 text-center font-mono py-1">
+                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{fixture.homeTeam} Wins</div>
+                  <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{h2h.homeWins}</div>
                 </div>
-              )}
-
-              {/* 2. League Standing Tab */}
-              {activeMeasurementTab === 'STANDING' && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      League Table Standing
-                    </span>
-                    <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                      Advantage Factor: x{leagueStanding.standingAdvantageFactor}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1">
-                      <div className="font-bold text-slate-900 dark:text-white truncate">{fixture.homeTeam}</div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">Table Position:</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{leagueStanding.homeRank} of {leagueStanding.totalTeams}</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">Points:</span>
-                        <span className="font-bold">{leagueStanding.homePoints} pts</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">Goal Difference:</span>
-                        <span className="font-bold">{leagueStanding.homeGoalDiff > 0 ? `+${leagueStanding.homeGoalDiff}` : leagueStanding.homeGoalDiff}</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1">
-                      <div className="font-bold text-slate-900 dark:text-white truncate">{fixture.awayTeam}</div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">Table Position:</span>
-                        <span className="font-bold text-cyan-600 dark:text-cyan-400">{leagueStanding.awayRank} of {leagueStanding.totalTeams}</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">Points:</span>
-                        <span className="font-bold">{leagueStanding.awayPoints} pts</span>
-                      </div>
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-500">Goal Difference:</span>
-                        <span className="font-bold">{leagueStanding.awayGoalDiff > 0 ? `+${leagueStanding.awayGoalDiff}` : leagueStanding.awayGoalDiff}</span>
-                      </div>
-                    </div>
-                  </div>
+                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400">Draws</div>
+                  <div className="text-sm font-bold text-amber-600 dark:text-amber-400">{h2h.draws}</div>
                 </div>
-              )}
-
-              {/* 3. Performance of This Year Tab */}
-              {activeMeasurementTab === 'THIS_YEAR' && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      Current Year Performance
-                    </span>
-                    <span className="font-mono text-[11px] text-slate-500">
-                      Season 2024–2026 Record
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
-                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.homeTeam}</div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Win Rate:</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{Math.round(thisYearPerformance.home.winRate * 100)}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Points Per Game:</span>
-                        <span className="font-bold">{thisYearPerformance.home.pointsPerGame}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Goals Scored:</span>
-                        <span className="font-bold">{thisYearPerformance.home.goalsPerGame} per game</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Clean Sheet Rate:</span>
-                        <span className="font-bold">{Math.round(thisYearPerformance.home.cleanSheetRate * 100)}%</span>
-                      </div>
-                      <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
-                        <span className="text-slate-500">Performance Score:</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">x{thisYearPerformance.home.performanceScore}</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
-                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.awayTeam}</div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Win Rate:</span>
-                        <span className="font-bold text-cyan-600 dark:text-cyan-400">{Math.round(thisYearPerformance.away.winRate * 100)}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Points Per Game:</span>
-                        <span className="font-bold">{thisYearPerformance.away.pointsPerGame}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Goals Scored:</span>
-                        <span className="font-bold">{thisYearPerformance.away.goalsPerGame} per game</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Clean Sheet Rate:</span>
-                        <span className="font-bold">{Math.round(thisYearPerformance.away.cleanSheetRate * 100)}%</span>
-                      </div>
-                      <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
-                        <span className="text-slate-500">Performance Score:</span>
-                        <span className="font-bold text-cyan-600 dark:text-cyan-400">x{thisYearPerformance.away.performanceScore}</span>
-                      </div>
-                    </div>
-                  </div>
+                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{fixture.awayTeam} Wins</div>
+                  <div className="text-sm font-bold text-cyan-600 dark:text-cyan-400">{h2h.awayWins}</div>
                 </div>
-              )}
+              </div>
 
-              {/* 4. Performance of Last Year Tab */}
-              {activeMeasurementTab === 'LAST_YEAR' && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      Last Year Baseline &amp; Progression
-                    </span>
-                    <span className="font-mono text-[11px] text-slate-500">
-                      Historical Continuity Factor
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
-                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.homeTeam}</div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Last Year Rank:</span>
-                        <span className="font-bold">{lastYearPerformance.home.lastYearRank}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Last Year Win Rate:</span>
-                        <span className="font-bold">{Math.round(lastYearPerformance.home.lastYearWinRate * 100)}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">YoY Progression:</span>
-                        <span className={`font-bold ${lastYearPerformance.home.yearOverYearProgression >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
-                          {lastYearPerformance.home.yearOverYearProgression >= 0 ? '+' : ''}{(lastYearPerformance.home.yearOverYearProgression * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
-                        <span className="text-slate-500">Baseline Multiplier:</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">x{lastYearPerformance.home.historicalBaselineFactor}</span>
-                      </div>
+              {h2h.recentH2H.length > 0 && (
+                <div className="pt-1 space-y-1">
+                  <div className="text-[10px] text-slate-400 font-medium">Recent Encounters:</div>
+                  {h2h.recentH2H.map((r, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-slate-300">
+                      <span className="text-slate-400">{r.date}</span>
+                      <span className="font-semibold">{r.homeTeam} vs {r.awayTeam}</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">{r.score}</span>
                     </div>
-
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
-                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.awayTeam}</div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Last Year Rank:</span>
-                        <span className="font-bold">{lastYearPerformance.away.lastYearRank}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Last Year Win Rate:</span>
-                        <span className="font-bold">{Math.round(lastYearPerformance.away.lastYearWinRate * 100)}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">YoY Progression:</span>
-                        <span className={`font-bold ${lastYearPerformance.away.yearOverYearProgression >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`}>
-                          {lastYearPerformance.away.yearOverYearProgression >= 0 ? '+' : ''}{(lastYearPerformance.away.yearOverYearProgression * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
-                        <span className="text-slate-500">Baseline Multiplier:</span>
-                        <span className="font-bold text-cyan-600 dark:text-cyan-400">x{lastYearPerformance.away.historicalBaselineFactor}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 5. Elo Rating Tab */}
-              {activeMeasurementTab === 'ELO' && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      Elo Rating Analysis
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
-                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.homeTeam}</div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Rating:</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{measurements.eloRating.home.rating}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Volatility:</span>
-                        <span className="font-bold">{measurements.eloRating.home.volatility}</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-1 font-mono text-[11px]">
-                      <div className="font-bold text-slate-900 dark:text-white truncate font-sans text-xs">{fixture.awayTeam}</div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Rating:</span>
-                        <span className="font-bold text-cyan-600 dark:text-cyan-400">{measurements.eloRating.away.rating}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Volatility:</span>
-                        <span className="font-bold">{measurements.eloRating.away.volatility}</span>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -509,18 +225,119 @@ export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
             </div>
           )}
 
-          {/* Match Dynamic Statistics from Scraper if present */}
-          {fixture.statistics && fixture.statistics.length > 0 && (
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs space-y-2">
-              <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-300 uppercase tracking-wider">
-                Match Statistics
-              </h4>
-              <div className="space-y-1.5 text-xs font-mono">
-                {fixture.statistics.map((stat, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400 w-16 text-left">{stat.homeValue}</span>
-                    <span className="text-slate-600 dark:text-slate-300 font-sans text-center flex-1">{stat.category}</span>
-                    <span className="font-bold text-cyan-600 dark:text-cyan-400 w-16 text-right">{stat.awayValue}</span>
+          {/* Match Dynamic Statistics Parsed from Scraper */}
+          {parsedStatsSummary.items.length > 0 && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5 text-cyan-500" />
+                  <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                    Match Statistics
+                  </h4>
+                </div>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                  Dynamic Parser ({parsedStatsSummary.items.length})
+                </span>
+              </div>
+
+              {/* High-level possession comparison bar if possession is parsed */}
+              {parsedStatsSummary.possession && (
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs space-y-1.5 font-mono text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {parsedStatsSummary.possession.home}%
+                    </span>
+                    <span className="font-sans text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                      Ball Possession
+                    </span>
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400">
+                      {parsedStatsSummary.possession.away}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full flex overflow-hidden">
+                    <div
+                      style={{ width: `${parsedStatsSummary.possession.home}%` }}
+                      className="bg-emerald-500 transition-all duration-300"
+                    />
+                    <div
+                      style={{ width: `${parsedStatsSummary.possession.away}%` }}
+                      className="bg-cyan-500 transition-all duration-300"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Dynamic Group Filter Tabs */}
+              {parsedStatsSummary.availableGroups.length > 1 && (
+                <div className="flex items-center bg-white dark:bg-slate-950 p-1 rounded-xl shadow-xs overflow-x-auto no-scrollbar gap-1">
+                  {parsedStatsSummary.availableGroups.map((g) => (
+                    <button
+                      key={g.group}
+                      type="button"
+                      onClick={() => setStatFilterGroup(g.group)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                        statFilterGroup === g.group
+                          ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <span>{g.label}</span>
+                      <span className="text-[10px] opacity-75 font-mono">({g.count})</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Parsed Metric Items */}
+              <div className="space-y-2">
+                {filteredStatItems.map((stat, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span
+                        className={`font-bold w-16 text-left ${
+                          stat.leader === 'HOME'
+                            ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+                            : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {stat.home.raw}
+                      </span>
+                      <span className="text-slate-700 dark:text-slate-300 font-sans font-semibold text-center flex-1 truncate px-2">
+                        {stat.category}
+                      </span>
+                      <span
+                        className={`font-bold w-16 text-right ${
+                          stat.leader === 'AWAY'
+                            ? 'text-cyan-600 dark:text-cyan-400 font-extrabold'
+                            : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {stat.away.raw}
+                      </span>
+                    </div>
+
+                    {/* Comparative Visual Share Bar */}
+                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full flex overflow-hidden">
+                      <div
+                        style={{ width: `${stat.homeSharePercent}%` }}
+                        className={`transition-all duration-300 ${
+                          stat.isInverseMetric
+                            ? 'bg-rose-500'
+                            : 'bg-emerald-500'
+                        }`}
+                      />
+                      <div
+                        style={{ width: `${stat.awaySharePercent}%` }}
+                        className={`transition-all duration-300 ${
+                          stat.isInverseMetric
+                            ? 'bg-amber-500'
+                            : 'bg-cyan-500'
+                        }`}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

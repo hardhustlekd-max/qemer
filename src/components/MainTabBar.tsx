@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Filter, ChevronDown, Search } from 'lucide-react';
 import { GLOBAL_LEAGUES_DATASET } from '../core/globalLeaguesDataset.js';
 
@@ -34,13 +34,33 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
   setIsLeagueModalOpen,
 }) => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close filter modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsFilterOpen(false);
+      }
+    };
+
+    if (isFilterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isFilterOpen]);
 
   const dateOptions = [
-    { key: 'ALL', label: 'All Leagues & Dates' },
-    { key: 'THIS_WEEK', label: 'This Week' },
     { key: 'TODAY', label: "Today's Matches" },
     { key: 'TOMORROW', label: 'Tomorrow' },
     { key: 'NEXT_3_DAYS', label: 'Next 3 Days' },
+    { key: 'THIS_WEEK', label: 'This Week' },
+    { key: 'ALL', label: 'All Dates' },
   ];
 
   const marketOptions = [
@@ -87,12 +107,11 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
           </button>
         </div>
 
-        {/* Right side: Filter Button with Hover/Click Popover */}
+        {/* Right side: Filter Button with Click Modal */}
         {activeTab === 'FIXTURES' && (
           <div 
+            ref={filterDropdownRef}
             className="relative shrink-0"
-            onMouseEnter={() => setIsFilterOpen(true)}
-            onMouseLeave={() => setIsFilterOpen(false)}
           >
             <button
               type="button"
@@ -106,12 +125,13 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
 
             {/* Whole Complete Filter Section Hovering Above Every Component */}
             {isFilterOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-[#0B0F17] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[9999] p-4 space-y-3 font-sans">
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-[#0B0F17] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[9999] p-4 space-y-3 font-sans animate-in fade-in zoom-in-95 duration-100">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Match Filters</span>
                   <button 
+                    type="button"
                     onClick={() => setIsFilterOpen(false)}
-                    className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold px-2 py-0.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     Close
                   </button>
@@ -227,6 +247,18 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
                       Cards
                     </button>
                   </div>
+                </div>
+
+                {/* Add Filter / Apply Button Inside */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                    <span>Apply Filter</span>
+                  </button>
                 </div>
               </div>
             )}

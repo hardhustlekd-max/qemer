@@ -231,108 +231,16 @@ Write a clean, rich, and well-structured markdown summary with bullet points, em
 
     commitCurrent();
 
-    // If parsing yielded few items, generate default structured cards from markdown
-    if (items.length < 3) {
-      items.push(
-        {
-          id: 'tip_h1',
-          category: 'HEADLINE',
-          title: '🔥 Live European Matchday & Domestic League Spotlight',
-          analysis: markdown.slice(0, 350) + '...',
-          sourceTitle: sources[0]?.title || 'Google Search Grounding',
-          sourceUrl: sources[0]?.url || 'https://news.google.com',
-        },
-        {
-          id: 'tip_m1',
-          category: 'MATCH_PREVIEW',
-          title: '⚽ Premier League & Continental Showdowns',
-          predictionOrTip: 'Over 2.5 Goals / Both Teams to Score',
-          confidenceOrOdds: '1.75 - 1.95 EV',
-          analysis: 'Intense offensive matchups with high pressing metrics across top domestic clashes.',
-          sourceTitle: sources[1]?.title || 'Match Analysis Feed',
-          sourceUrl: sources[1]?.url || 'https://www.bbc.com/sport/football',
-        },
-        {
-          id: 'tip_b1',
-          category: 'BETTING_TIP',
-          title: '🎯 Banker & Value Accumulator Insights',
-          predictionOrTip: 'Home Win & Over 1.5 Team Goals',
-          confidenceOrOdds: 'High Confidence (78%)',
-          analysis: 'Statistical Poisson expected goals align with high home conversion and defensive solidity.',
-          sourceTitle: sources[2]?.title || 'Betting Intelligence',
-          sourceUrl: sources[2]?.url || 'https://www.skysports.com/football',
-        }
-      );
-    }
-
     return items;
   }
 
   private static getFallbackTipsData(todayStr: string, quotaNotice?: string): TrendingTipsData {
     return {
       lastUpdated: new Date().toISOString(),
-      headlineSummary: "Today's top European football headlines, Poisson-grounded matchday previews, and accumulator value tips.",
-      rawAnalysisMarkdown: `### 🏆 European Football Headlines & Matchday Highlights (${todayStr})
-* **Premier League Race:** Title contenders and European hopefuls gear up for crucial tactical clashes with intense pressing battles and high expected goal metrics.
-* **Continental Competitions:** Champions League & Europa League form continues to influence domestic squad rotations and rest days.
-* **Key Injury News:** Top wingers and defensive anchors returning from international break boosts set-piece efficiency.
-
-### ⚽ Expert Matchday Tips & Value Angles
-* **Arsenal / Man City / Liverpool Fixtures:** High-intensity territorial dominance favors **Home Win & Over 2.5 Goals** (Poisson xG > 2.15).
-* **La Liga & Serie A Tactical Battles:** Real Madrid, Barcelona, and Inter Milan showcase strong defensive form, making **Under 3.5 Goals / Clean Sheet** strong value angles.
-* **Bundesliga High-Octane Matches:** Bayern Munich & Bayer Leverkusen average 3.2+ match goals, creating prime **Both Teams to Score (BTTS - Yes)** opportunities.
-
-### 🛡️ Best Value Accumulator Picks
-1. **Match Winner:** Top League Leaders on home ground with >72% Poisson Win Probability.
-2. **Goal Markets:** Over 1.5 Total Goals in fixture with combined xG > 2.80.
-3. **Double Chance:** Away Underdog with strong defensive transition metrics (1X / X2).`,
-      tips: [
-        {
-          id: 'tip_fb_1',
-          category: 'HEADLINE',
-          title: 'Premier League & European Fixture Momentum',
-          league: 'Premier League',
-          analysis: 'Title contenders and Champions League chasers face defining tests with high tactical intensity and squad depth challenges.',
-          sourceTitle: 'BBC Sport Football',
-          sourceUrl: 'https://www.bbc.com/sport/football',
-        },
-        {
-          id: 'tip_fb_2',
-          category: 'MATCH_PREVIEW',
-          title: 'High-Scoring Clashes in Continental Leagues',
-          match: 'Featured European Matches',
-          league: 'European Top Leagues',
-          predictionOrTip: 'Over 2.5 Goals & BTTS Yes',
-          confidenceOrOdds: '1.85 (62% Prob)',
-          analysis: 'Poisson distribution models project combined expected goals of 3.10+ with active pressing and defensive transitions.',
-          sourceTitle: 'Sky Sports Football News',
-          sourceUrl: 'https://www.skysports.com/football',
-        },
-        {
-          id: 'tip_fb_3',
-          category: 'BETTING_TIP',
-          title: 'Banker Pick: Home Dominance Multiplier',
-          predictionOrTip: 'Home Win',
-          confidenceOrOdds: '1.45 (76% Prob - Positive EV)',
-          analysis: 'Home advantage factor of 1.12 combined with 5-game rolling attack efficiency gives a decisive edge.',
-          sourceTitle: 'Football Analysis Digest',
-          sourceUrl: 'https://theathletic.com/football',
-        },
-        {
-          id: 'tip_fb_4',
-          category: 'INJURY_TEAM_NEWS',
-          title: 'Key Squad Returns & Rest Days Impact',
-          analysis: 'Teams with 7+ days of rest show a +0.22 expected goals surge compared to fatigued midweek squads.',
-          sourceTitle: 'Flashscore Football',
-          sourceUrl: 'https://www.flashscore.com/football',
-        },
-      ],
-      groundingSources: [
-        { title: 'BBC Sport Football', url: 'https://www.bbc.com/sport/football' },
-        { title: 'Sky Sports Football News', url: 'https://www.skysports.com/football' },
-        { title: 'The Athletic Football', url: 'https://theathletic.com/football' },
-        { title: 'Flashscore Live Updates', url: 'https://www.flashscore.com/football' },
-      ],
+      headlineSummary: "Live Google Search grounded analysis currently unavailable.",
+      rawAnalysisMarkdown: `### European Football Analysis (${todayStr})\nNo live analysis stream available at this moment.`,
+      tips: [],
+      groundingSources: [],
       isRealGrounding: false,
       quotaNotice,
     };

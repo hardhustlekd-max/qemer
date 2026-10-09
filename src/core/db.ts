@@ -249,6 +249,45 @@ export class FootballDB {
         const initialFixtures = getInitialUpcomingFixtures();
         this.insertUpcomingFixtures(initialFixtures);
       }
+
+      // Check scraped matches count
+      const scrapedCountRes = this.db.exec(`SELECT COUNT(*) as count FROM flashscore_scraped_matches`);
+      const scrapedCount = scrapedCountRes[0]?.values[0]?.[0] ? Number(scrapedCountRes[0].values[0][0]) : 0;
+
+      if (scrapedCount === 0) {
+        this.saveFlashscoreScrapedMatches([
+          {
+            matchId: 'IHCq3ARL',
+            stage: 'FINAL',
+            status: 'AFTER PENALTIES',
+            date: '2022-02-20 16:00',
+            country: 'Brazil',
+            leagueName: 'Supercopa do Brasil',
+            home: {
+              name: 'Atletico-MG',
+              image: 'https://static.flashscore.com/res/image/data/WbSJHDh5-pCk2vaSD.png',
+            },
+            away: {
+              name: 'Flamengo RJ',
+              image: 'https://static.flashscore.com/res/image/data/ADvIaiZA-2R2JjDQC.png',
+            },
+            result: {
+              home: '3',
+              away: '2',
+              regulationTime: '2-2',
+              penalties: '8-7',
+            },
+            information: [
+              { category: 'Referee', value: 'Daronco A. (Bra)' },
+              { category: 'Venue', value: 'Arena Pantanal (Cuiabá)' },
+              { category: 'Capacity', value: '44 000' },
+            ],
+            statistics: [
+              { category: 'Ball Possession', homeValue: '57%', awayValue: '43%' },
+            ],
+          },
+        ]);
+      }
     } catch (err) {
       console.error('Error seeding initial SQLite dataset:', err);
     }

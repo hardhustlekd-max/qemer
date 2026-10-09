@@ -167,54 +167,73 @@ export class FlashscoreScraperService {
     const lowerCountry = country.toLowerCase();
 
     // Direct match against known major leagues
-    if (lowerTourn.includes('premier league') && (lowerCountry.includes('england') || lowerCountry.includes('uk'))) {
+    if (lowerTourn.includes('premier league') && (lowerCountry.includes('england') || lowerCountry.includes('uk') || tournament.toLowerCase().includes('england'))) {
       return { code: 'E0', name: 'English Premier League' };
     }
-    if (lowerTourn.includes('championship') && lowerCountry.includes('england')) {
+    if (lowerTourn.includes('championship') && (lowerCountry.includes('england') || tournament.toLowerCase().includes('england'))) {
       return { code: 'E1', name: 'English Championship' };
     }
-    if (lowerTourn.includes('la liga') || (lowerTourn.includes('laliga') && lowerCountry.includes('spain'))) {
+    if ((lowerTourn.includes('la liga') || lowerTourn.includes('laliga')) && (lowerCountry.includes('spain') || tournament.toLowerCase().includes('spain'))) {
       return { code: 'SP1', name: 'Spanish La Liga' };
     }
-    if (lowerTourn.includes('bundesliga') && lowerCountry.includes('germany')) {
+    if (lowerTourn.includes('bundesliga') && (lowerCountry.includes('germany') || tournament.toLowerCase().includes('germany'))) {
       return { code: 'D1', name: 'German Bundesliga' };
     }
-    if (lowerTourn.includes('serie a') && lowerCountry.includes('italy')) {
+    if (lowerTourn.includes('serie a') && (lowerCountry.includes('italy') || tournament.toLowerCase().includes('italy'))) {
       return { code: 'I1', name: 'Italian Serie A' };
     }
-    if (lowerTourn.includes('ligue 1') && lowerCountry.includes('france')) {
+    if (lowerTourn.includes('ligue 1') && (lowerCountry.includes('france') || tournament.toLowerCase().includes('france'))) {
       return { code: 'F1', name: 'French Ligue 1' };
     }
-    if (lowerTourn.includes('champions league')) {
+    if (lowerTourn.includes('champions league') && (lowerCountry.includes('europe') || tournament.toLowerCase().includes('europe') || lowerCountry.includes('international') || tournament.toLowerCase().includes('international') || (!lowerTourn.includes('caf') && !lowerTourn.includes('afc') && !lowerTourn.includes('concacaf') && !lowerTourn.includes('women')))) {
       return { code: 'UCL', name: 'UEFA Champions League' };
     }
     if (lowerTourn.includes('europa league')) {
       return { code: 'UEL', name: 'UEFA Europa League' };
     }
-    if (lowerTourn.includes('eredivisie') || lowerCountry.includes('netherlands')) {
+    if (lowerTourn.includes('conference league')) {
+      return { code: 'UECL', name: 'UEFA Europa Conference League' };
+    }
+    if (lowerTourn.includes('eredivisie') && (lowerCountry.includes('netherlands') || tournament.toLowerCase().includes('netherlands'))) {
       return { code: 'N1', name: 'Dutch Eredivisie' };
     }
-    if (lowerTourn.includes('primeira liga') || (lowerTourn.includes('liga portugal') && lowerCountry.includes('portugal'))) {
+    if ((lowerTourn.includes('primeira liga') || lowerTourn.includes('liga portugal')) && (lowerCountry.includes('portugal') || tournament.toLowerCase().includes('portugal'))) {
       return { code: 'P1', name: 'Portuguese Primeira Liga' };
     }
-    if (lowerTourn.includes('serie a') && lowerCountry.includes('brazil')) {
+    if (lowerTourn.includes('serie a') && (lowerCountry.includes('brazil') || tournament.toLowerCase().includes('brazil'))) {
       return { code: 'BRA', name: 'Brazilian Série A' };
     }
-    if (lowerTourn.includes('major league soccer') || lowerTourn.includes('mls')) {
+    if (lowerTourn.includes('major league soccer') || lowerTourn === 'mls' || (lowerTourn.includes('mls') && lowerCountry.includes('usa'))) {
       return { code: 'MLS', name: 'Major League Soccer' };
     }
 
-    // Try matching global leagues dataset
-    const matched = GLOBAL_LEAGUES_DATASET.find(
-      (gl) => gl.name.toLowerCase() === lowerTourn || (gl.country?.toLowerCase() === lowerCountry && lowerTourn.includes(gl.name.toLowerCase()))
-    );
+    // Try matching global leagues dataset with BOTH country and name match
+    const matchedWithCountry = GLOBAL_LEAGUES_DATASET.find((gl) => {
+      const countryMatches = gl.country && (
+        lowerCountry.includes(gl.country.toLowerCase()) ||
+        gl.country.toLowerCase().includes(lowerCountry) ||
+        tournament.toLowerCase().includes(gl.country.toLowerCase())
+      );
+      if (!countryMatches) return false;
+      return gl.name.toLowerCase() === lowerTourn || lowerTourn.includes(gl.name.toLowerCase()) || gl.name.toLowerCase().includes(lowerTourn);
+    });
 
-    if (matched) {
-      return { code: matched.code, name: matched.name };
+    if (matchedWithCountry) {
+      return { code: matchedWithCountry.code, name: matchedWithCountry.name };
     }
 
-    const simpleCode = (country.slice(0, 3) + '1').toUpperCase();
-    return { code: simpleCode, name: `${country}: ${cleanedTournament}` };
+    // If international competition
+    if (lowerCountry.includes('international') || lowerCountry.includes('world') || lowerCountry.includes('europe')) {
+      const matchedIntl = GLOBAL_LEAGUES_DATASET.find(
+        (gl) => (gl.country === 'International' || gl.country === 'Europe') && gl.name.toLowerCase() === lowerTourn
+      );
+      if (matchedIntl) {
+        return { code: matchedIntl.code, name: matchedIntl.name };
+      }
+    }
+
+    const simpleCode = ((country ? country.slice(0, 3) : 'INT') + '1').toUpperCase();
+    return { code: simpleCode, name: country ? `${country}: ${cleanedTournament}` : cleanedTournament };
   }
 
   /**
@@ -542,18 +561,7 @@ export class FlashscoreScraperService {
       return existing;
     }
 
-    // Return constructed match data
-    return {
-      matchId,
-      stage: 'Competition Match',
-      date: new Date().toISOString(),
-      status: 'SCHEDULED',
-      home: { name: 'Home Team' },
-      away: { name: 'Away Team' },
-      result: { home: '0', away: '0' },
-      information: [{ category: 'Provider', value: 'FlashscoreScraper' }],
-      statistics: [],
-    };
+    return null;
   }
 
   /**

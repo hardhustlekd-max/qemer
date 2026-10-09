@@ -9,10 +9,6 @@ import {
   EngineSettings,
   HeadToHeadMeasurement,
   HeadToHeadMatchRecord,
-  LeagueStandingMeasurement,
-  SeasonPerformanceMeasurement,
-  LastYearPerformanceMeasurement,
-  EloRatingMeasurement,
   PredictionEngineMeasurements,
 } from './types.js';
 
@@ -228,235 +224,8 @@ export class PoissonEngine {
   }
 
   /**
-   * League Standing Measurement
-   */
-  public static computeLeagueStanding(
-    homeTeam: string,
-    awayTeam: string,
-    leagueMatches: HistoricalMatch[]
-  ): LeagueStandingMeasurement {
-    const tableMap = new Map<string, { points: number; goalDiff: number; played: number }>();
-
-    for (const m of leagueMatches) {
-      const ht = m.homeTeam;
-      const at = m.awayTeam;
-      if (!tableMap.has(ht)) tableMap.set(ht, { points: 0, goalDiff: 0, played: 0 });
-      if (!tableMap.has(at)) tableMap.set(at, { points: 0, goalDiff: 0, played: 0 });
-
-      const hRec = tableMap.get(ht)!;
-      const aRec = tableMap.get(at)!;
-
-      hRec.played++;
-      aRec.played++;
-      hRec.goalDiff += m.fthg - m.ftag;
-      aRec.goalDiff += m.ftag - m.fthg;
-
-      if (m.ftr === 'H') {
-        hRec.points += 3;
-      } else if (m.ftr === 'A') {
-        aRec.points += 3;
-      } else {
-        hRec.points += 1;
-        aRec.points += 1;
-      }
-    }
-
-    const sortedTable = Array.from(tableMap.entries()).sort(
-      (a, b) => b[1].points - a[1].points || b[1].goalDiff - a[1].goalDiff
-    );
-
-    const totalTeams = Math.max(10, sortedTable.length);
-    let homeRank = sortedTable.findIndex((entry) => entry[0].toLowerCase() === homeTeam.toLowerCase()) + 1;
-    let awayRank = sortedTable.findIndex((entry) => entry[0].toLowerCase() === awayTeam.toLowerCase()) + 1;
-
-    if (homeRank <= 0) homeRank = Math.min(6, Math.floor(totalTeams / 2));
-    if (awayRank <= 0) awayRank = Math.min(10, Math.floor(totalTeams / 2) + 2);
-
-    const homeStats = tableMap.get(homeTeam) || {
-      points: Math.max(12, Math.round(totalTeams * 2.2 - homeRank * 2)),
-      goalDiff: 8 - homeRank,
-    };
-    const awayStats = tableMap.get(awayTeam) || {
-      points: Math.max(10, Math.round(totalTeams * 2.2 - awayRank * 2)),
-      goalDiff: 8 - awayRank,
-    };
-
-    const rankDiff = awayRank - homeRank;
-    const standingAdvantageFactor = Number(
-      Math.max(0.85, Math.min(1.18, 1.0 + (rankDiff / totalTeams) * 0.16)).toFixed(3)
-    );
-
-    return {
-      homeRank,
-      awayRank,
-      totalTeams,
-      homePoints: homeStats.points,
-      awayPoints: awayStats.points,
-      homeGoalDiff: homeStats.goalDiff,
-      awayGoalDiff: awayStats.goalDiff,
-      standingAdvantageFactor,
-    };
-  }
-
-  /**
-   * Performance of this year (Current Season Performance)
-   */
-  public static computeSeasonPerformance(
-    teamName: string,
-    allMatches: HistoricalMatch[]
-  ): SeasonPerformanceMeasurement {
-    const teamMatches = allMatches
-      .filter(
-        (m) =>
-          m.homeTeam.toLowerCase() === teamName.toLowerCase() ||
-          m.awayTeam.toLowerCase() === teamName.toLowerCase()
-      )
-      .slice(0, 18);
-
-    const matchesPlayed = Math.max(1, teamMatches.length);
-    let wins = 0;
-    let draws = 0;
-    let losses = 0;
-    let goalsScored = 0;
-    let goalsConceded = 0;
-    let cleanSheets = 0;
-
-    for (const m of teamMatches) {
-      const isHome = m.homeTeam.toLowerCase() === teamName.toLowerCase();
-      const gf = isHome ? m.fthg : m.ftag;
-      const ga = isHome ? m.ftag : m.fthg;
-      goalsScored += gf;
-      goalsConceded += ga;
-      if (ga === 0) cleanSheets++;
-
-      if (gf > ga) wins++;
-      else if (ga > gf) losses++;
-      else draws++;
-    }
-
-    const winRate = Number((wins / matchesPlayed).toFixed(3));
-    const drawRate = Number((draws / matchesPlayed).toFixed(3));
-    const lossRate = Number((losses / matchesPlayed).toFixed(3));
-    const pointsPerGame = Number(((wins * 3 + draws) / matchesPlayed).toFixed(2));
-    const goalsPerGame = Number((goalsScored / matchesPlayed).toFixed(2));
-    const concededPerGame = Number((goalsConceded / matchesPlayed).toFixed(2));
-    const cleanSheetRate = Number((cleanSheets / matchesPlayed).toFixed(2));
-
-    const performanceScore = Number(
-      Math.max(0.85, Math.min(1.18, 0.88 + (pointsPerGame / 3.0) * 0.26)).toFixed(3)
-    );
-
-    return {
-      matchesPlayed,
-      winRate,
-      drawRate,
-      lossRate,
-      pointsPerGame,
-      goalsPerGame,
-      concededPerGame,
-      cleanSheetRate,
-      performanceScore,
-    };
-  }
-
-  /**
-   * Performance of last year (Previous Season Performance)
-   */
-  public static computeLastYearPerformance(
-    teamName: string,
-    allMatches: HistoricalMatch[]
-  ): LastYearPerformanceMeasurement {
-    const priorMatches = allMatches
-      .filter(
-        (m) =>
-          m.homeTeam.toLowerCase() === teamName.toLowerCase() ||
-          m.awayTeam.toLowerCase() === teamName.toLowerCase()
-      )
-      .slice(10, 30);
-
-    const count = Math.max(1, priorMatches.length);
-    let wins = 0;
-    let goals = 0;
-
-    for (const m of priorMatches) {
-      const isHome = m.homeTeam.toLowerCase() === teamName.toLowerCase();
-      const gf = isHome ? m.fthg : m.ftag;
-      const ga = isHome ? m.ftag : m.fthg;
-      goals += gf;
-      if (gf > ga) wins++;
-    }
-
-    const lastYearWinRate = Number((wins / count).toFixed(3));
-    const lastYearGoalsPerGame = Number((goals / count).toFixed(2));
-    const lastYearRank = Math.max(1, Math.min(20, Math.round(18 - lastYearWinRate * 16)));
-    const lastYearPoints = Math.round(wins * 2.8 + count * 0.7);
-
-    const teamRecentMatches = allMatches
-      .filter(
-        (m) =>
-          m.homeTeam.toLowerCase() === teamName.toLowerCase() ||
-          m.awayTeam.toLowerCase() === teamName.toLowerCase()
-      )
-      .slice(0, 10);
-    const recentWins = teamRecentMatches.filter((m) => {
-      const isHome = m.homeTeam.toLowerCase() === teamName.toLowerCase();
-      return isHome ? m.fthg > m.ftag : m.ftag > m.fthg;
-    }).length;
-    const currentWinRate = teamRecentMatches.length > 0 ? recentWins / teamRecentMatches.length : lastYearWinRate;
-
-    const yearOverYearProgression = Number((currentWinRate - lastYearWinRate).toFixed(3));
-    const historicalBaselineFactor = Number(
-      Math.max(0.90, Math.min(1.15, 0.94 + lastYearWinRate * 0.18 + yearOverYearProgression * 0.08)).toFixed(3)
-    );
-
-    return {
-      lastYearRank,
-      lastYearPoints,
-      lastYearWinRate,
-      lastYearGoalsPerGame,
-      yearOverYearProgression,
-      historicalBaselineFactor,
-    };
-  }
-
-  /**
-   * Elo Rating Measurement
-   */
-  public static computeEloRating(
-    teamName: string,
-    allMatches: HistoricalMatch[]
-  ): EloRatingMeasurement {
-    const teamMatches = allMatches.filter(
-      (m) =>
-        m.homeTeam.toLowerCase() === teamName.toLowerCase() ||
-        m.awayTeam.toLowerCase() === teamName.toLowerCase()
-    );
-
-    let rating = 1500;
-    const K = 20;
-
-    for (const m of teamMatches) {
-      const isHome = m.homeTeam.toLowerCase() === teamName.toLowerCase();
-      const opponentName = isHome ? m.awayTeam : m.homeTeam;
-      const result = isHome ? m.ftr : (m.ftr === 'H' ? 'A' : m.ftr === 'A' ? 'H' : 'D');
-      
-      const score = result === 'H' ? 1 : result === 'D' ? 0.5 : 0;
-      const expected = 0.5; // Simplified expectation
-
-      rating += K * (score - expected);
-    }
-
-    return {
-      rating: Math.round(rating),
-      lastUpdated: new Date().toISOString().split('T')[0],
-      volatility: 10,
-      recentChange: 0,
-    };
-  }
-
-  /**
    * Generates a complete Poisson match probability prediction & expected goals
-   * integrating all engine measurements: H2H, League Standing, This Year, Last Year, Lineup & Elo Rating
+   * integrating available measurements from scraped match records: Head-to-Head (H2H)
    */
   public static predictMatch(
     homeTeam: string,
@@ -488,68 +257,28 @@ export class PoissonEngine {
       leagueAwayAvg = totA / leagueHistoricalMatches.length;
     }
 
-    // 1. Head-to-Head (H2H) Measurement
+    // Head-to-Head (H2H) Measurement from scraped match records
     const h2h = this.computeHeadToHead(homeTeam, awayTeam, leagueHistoricalMatches);
-
-    // 2. League Standing Measurement
-    const leagueStanding = this.computeLeagueStanding(homeTeam, awayTeam, leagueHistoricalMatches);
-
-    // 3. Performance of this year (Current Season Performance)
-    const thisYearHome = this.computeSeasonPerformance(homeTeam, leagueHistoricalMatches);
-    const thisYearAway = this.computeSeasonPerformance(awayTeam, leagueHistoricalMatches);
-
-    // 4. Performance of last year (Previous Season Performance)
-    const lastYearHome = this.computeLastYearPerformance(homeTeam, leagueHistoricalMatches);
-    const lastYearAway = this.computeLastYearPerformance(awayTeam, leagueHistoricalMatches);
-
-    // 5. Elo Rating Measurement
-    const eloHome = this.computeEloRating(homeTeam, leagueHistoricalMatches);
-    const eloAway = this.computeEloRating(awayTeam, leagueHistoricalMatches);
 
     const measurements: PredictionEngineMeasurements = {
       h2h,
-      leagueStanding,
-      thisYearPerformance: { home: thisYearHome, away: thisYearAway },
-      lastYearPerformance: { home: lastYearHome, away: lastYearAway },
-      eloRating: { home: eloHome, away: eloAway },
-      combinedWeights: {
-        h2hWeight: 0.20,
-        standingWeight: 0.20,
-        thisYearWeight: 0.25,
-        lastYearWeight: 0.15,
-        eloRatingWeight: 0.20,
-      },
     };
 
-    // Calculate integrated factors for Expected Goals (xG)
-    const standingFactorHome = leagueStanding.standingAdvantageFactor;
-    const standingFactorAway = Number((2.0 - standingFactorHome).toFixed(3));
-    const eloFactorHome = Number(Math.max(0.9, Math.min(1.1, 1 + (eloHome.rating - eloAway.rating) / 2000)).toFixed(3));
-    const eloFactorAway = Number(Math.max(0.9, Math.min(1.1, 1 - (eloHome.rating - eloAway.rating) / 2000)).toFixed(3));
-
-    // Expected Goals λ incorporating available measurements
+    // Expected Goals λ incorporating available measurements from scraped match records
     let homeXG =
       homeStats.homeAttack *
       awayStats.awayDefense *
       leagueHomeAvg *
       homeStats.formScore *
       (settings.homeAdvantageFactor || 1.12) *
-      h2h.h2hMultiplierHome *
-      standingFactorHome *
-      thisYearHome.performanceScore *
-      lastYearHome.historicalBaselineFactor *
-      eloFactorHome;
+      h2h.h2hMultiplierHome;
 
     let awayXG =
       awayStats.awayAttack *
       homeStats.homeDefense *
       leagueAwayAvg *
       awayStats.formScore *
-      h2h.h2hMultiplierAway *
-      standingFactorAway *
-      thisYearAway.performanceScore *
-      lastYearAway.historicalBaselineFactor *
-      eloFactorAway;
+      h2h.h2hMultiplierAway;
 
     // Bounds check to avoid unrealistic extremes
     homeXG = Math.max(0.25, Math.min(4.5, homeXG));

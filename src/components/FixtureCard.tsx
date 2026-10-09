@@ -32,13 +32,8 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-2xs">
-              {fixture.leagueName}
+              {fixture.stage || fixture.leagueName}
             </span>
-            {fixture.stage && (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400">
-                {fixture.stage}
-              </span>
-            )}
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
               {fixture.kickOffTime}
             </span>

@@ -60,6 +60,7 @@ export interface HeadToHeadMatchRecord {
   awayTeam: string;
   score: string;
   winner: 'HOME' | 'AWAY' | 'DRAW';
+  competition?: string;
 }
 
 export interface HeadToHeadMeasurement {
@@ -74,67 +75,8 @@ export interface HeadToHeadMeasurement {
   recentH2H: HeadToHeadMatchRecord[];
 }
 
-export interface LeagueStandingMeasurement {
-  homeRank: number;
-  awayRank: number;
-  totalTeams: number;
-  homePoints: number;
-  awayPoints: number;
-  homeGoalDiff: number;
-  awayGoalDiff: number;
-  standingAdvantageFactor: number;
-}
-
-export interface SeasonPerformanceMeasurement {
-  matchesPlayed: number;
-  winRate: number;
-  drawRate: number;
-  lossRate: number;
-  pointsPerGame: number;
-  goalsPerGame: number;
-  concededPerGame: number;
-  cleanSheetRate: number;
-  performanceScore: number;
-}
-
-export interface LastYearPerformanceMeasurement {
-  lastYearRank: number;
-  lastYearPoints: number;
-  lastYearWinRate: number;
-  lastYearGoalsPerGame: number;
-  yearOverYearProgression: number;
-  historicalBaselineFactor: number;
-}
-
-export interface EloRatingMeasurement {
-  rating: number;
-  lastUpdated: string;
-  volatility: number;
-  recentChange: number;
-}
-
 export interface PredictionEngineMeasurements {
   h2h: HeadToHeadMeasurement;
-  leagueStanding: LeagueStandingMeasurement;
-  thisYearPerformance: {
-    home: SeasonPerformanceMeasurement;
-    away: SeasonPerformanceMeasurement;
-  };
-  lastYearPerformance: {
-    home: LastYearPerformanceMeasurement;
-    away: LastYearPerformanceMeasurement;
-  };
-  eloRating: {
-    home: EloRatingMeasurement;
-    away: EloRatingMeasurement;
-  };
-  combinedWeights: {
-    h2hWeight: number;
-    standingWeight: number;
-    thisYearWeight: number;
-    lastYearWeight: number;
-    eloRatingWeight: number;
-  };
 }
 
 export interface TeamFormMatch {

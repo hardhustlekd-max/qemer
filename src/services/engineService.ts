@@ -14,6 +14,7 @@ import { getRelativeDateStr } from '../core/seedData.js';
 import { LiveScore } from '../providers/types.js';
 import { GLOBAL_LEAGUES_DATASET } from '../core/globalLeaguesDataset.js';
 import { getInitialHistoricalMatches, getInitialUpcomingFixtures } from '../core/initialDbDataset.js';
+import { getLeaguePriority } from '../core/leaguePriority.js';
 
 // Default In-Memory Engine State for Universal & Client-Side execution (Vercel, Static, etc.)
 let localSettings: EngineSettings = {
@@ -166,7 +167,14 @@ export class EngineService {
       if (customEndDate) fixturesToProcess = fixturesToProcess.filter((f) => f.matchDate <= customEndDate);
     }
 
-    return fixturesToProcess;
+    // Sort prioritizing major popular leagues on top
+    return fixturesToProcess.slice().sort((a, b) => {
+      const priorityA = getLeaguePriority(a.league, a.leagueName, a.stage);
+      const priorityB = getLeaguePriority(b.league, b.leagueName, b.stage);
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      if (a.matchDate !== b.matchDate) return a.matchDate.localeCompare(b.matchDate);
+      return (a.kickOffTime || '').localeCompare(b.kickOffTime || '');
+    });
   }
 
   /**

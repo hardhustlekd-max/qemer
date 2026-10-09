@@ -5,6 +5,7 @@ import { PoissonEngine } from '../core/poisson.js';
 import { EngineSettings, Fixture } from '../core/types.js';
 import { getRelativeDateStr } from '../core/seedData.js';
 import { isMatchStarted } from '../core/accumulator.js';
+import { getLeaguePriority } from '../core/leaguePriority.js';
 
 export const fixturesRouter = Router();
 
@@ -46,6 +47,19 @@ fixturesRouter.get('/', async (req, res) => {
     // Retrieve all historical matches once for optimal performance
     const allMatches = db.getAllHistoricalMatches(1500);
 
+    // Look up scraped matches from SQLite cache
+    const scrapedMatches = db.getFlashscoreScrapedMatches(500);
+    const scrapedMap = new Map<string, any>();
+    for (const sm of scrapedMatches) {
+      if (sm.matchId) {
+        scrapedMap.set(sm.matchId, sm);
+        scrapedMap.set(`fs_${sm.matchId}`, sm);
+      }
+      if (sm.home?.name && sm.away?.name) {
+        scrapedMap.set(`${sm.home.name.toLowerCase()}__${sm.away.name.toLowerCase()}`, sm);
+      }
+    }
+
     // Process EVERY fixture through the Poisson engine first
     const enrichedFixtures: Fixture[] = fixtures.map((f) => {
       // Filter league-specific historical data
@@ -67,8 +81,28 @@ fixturesRouter.get('/', async (req, res) => {
         f.awayTeam
       );
 
+      const sm = scrapedMap.get(f.id) ||
+        scrapedMap.get(f.id.replace('fs_', '')) ||
+        scrapedMap.get(`${f.homeTeam.toLowerCase()}__${f.awayTeam.toLowerCase()}`);
+
+      const stage = sm?.stage || f.stage;
+      const homeBadge = sm?.home?.image || f.homeBadge;
+      const awayBadge = sm?.away?.image || f.awayBadge;
+      const information = (sm?.information && sm.information.length > 0) ? sm.information : f.information;
+      const statistics = (sm?.statistics && sm.statistics.length > 0) ? sm.statistics : f.statistics;
+      const resultDetails = sm?.result ? {
+        regulationTime: sm.result.regulationTime,
+        penalties: sm.result.penalties,
+      } : f.resultDetails;
+
       return {
         ...f,
+        stage,
+        homeBadge,
+        awayBadge,
+        information,
+        statistics,
+        resultDetails,
         prediction,
         markets,
         bestValueMarket,
@@ -99,6 +133,15 @@ fixturesRouter.get('/', async (req, res) => {
       if (startDate) resultFixtures = resultFixtures.filter((f) => f.matchDate >= startDate);
       if (endDate) resultFixtures = resultFixtures.filter((f) => f.matchDate <= endDate);
     }
+
+    // Sort prioritizing major popular leagues on top of the list
+    resultFixtures.sort((a, b) => {
+      const priorityA = getLeaguePriority(a.league, a.leagueName, a.stage);
+      const priorityB = getLeaguePriority(b.league, b.leagueName, b.stage);
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      if (a.matchDate !== b.matchDate) return a.matchDate.localeCompare(b.matchDate);
+      return (a.kickOffTime || '').localeCompare(b.kickOffTime || '');
+    });
 
     res.json({
       success: true,
@@ -179,10 +222,38 @@ fixturesRouter.get('/:id', async (req, res) => {
         (m.homeTeam.toLowerCase() === f.awayTeam.toLowerCase() && m.awayTeam.toLowerCase() === f.homeTeam.toLowerCase())
     );
 
+    // Look up scraped matches from SQLite cache
+    const scrapedMatches = db.getFlashscoreScrapedMatches(500);
+    const sm = scrapedMatches.find(
+      (item) =>
+        item.matchId === f.id ||
+        `fs_${item.matchId}` === f.id ||
+        (item.home?.name?.toLowerCase() === f.homeTeam.toLowerCase() &&
+          item.away?.name?.toLowerCase() === f.awayTeam.toLowerCase())
+    );
+
+    const stage = sm?.stage || f.stage;
+    const homeBadge = sm?.home?.image || f.homeBadge;
+    const awayBadge = sm?.away?.image || f.awayBadge;
+    const information = sm?.information && sm.information.length > 0 ? sm.information : f.information;
+    const statistics = sm?.statistics && sm.statistics.length > 0 ? sm.statistics : f.statistics;
+    const resultDetails = sm?.result
+      ? {
+          regulationTime: sm.result.regulationTime,
+          penalties: sm.result.penalties,
+        }
+      : f.resultDetails;
+
     res.json({
       success: true,
       fixture: {
         ...f,
+        stage,
+        homeBadge,
+        awayBadge,
+        information,
+        statistics,
+        resultDetails,
         prediction,
         markets,
         bestValueMarket,

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Fixture, MarketOption } from '../core/types.js';
+import { getLeaguePriority } from '../core/leaguePriority.js';
 import {
   ChevronDown,
   ChevronLeft,
@@ -37,10 +38,18 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
 
   const uniqueFixtures = useMemo(() => {
     const seen = new Set<string>();
-    return fixtures.filter((f) => {
+    const list = fixtures.filter((f) => {
       if (!f.id || seen.has(f.id)) return false;
       seen.add(f.id);
       return true;
+    });
+
+    return list.slice().sort((a, b) => {
+      const pa = getLeaguePriority(a.league, a.leagueName, a.stage);
+      const pb = getLeaguePriority(b.league, b.leagueName, b.stage);
+      if (pa !== pb) return pa - pb;
+      if (a.matchDate !== b.matchDate) return a.matchDate.localeCompare(b.matchDate);
+      return (a.kickOffTime || '').localeCompare(b.kickOffTime || '');
     });
   }, [fixtures]);
 
@@ -55,15 +64,46 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
   const startItemIndex = uniqueFixtures.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
   const endItemIndex = Math.min(safeCurrentPage * pageSize, uniqueFixtures.length);
 
-  // Group paginated fixtures by leagueName
+  // Group paginated fixtures by league & subdivision/stage
   const groupedByLeague = useMemo(() => {
-    const map: Record<string, Fixture[]> = {};
-    for (const f of paginatedFixtures) {
-      const leagueKey = f.leagueName || 'Premier League';
-      if (!map[leagueKey]) map[leagueKey] = [];
-      map[leagueKey].push(f);
+    interface LeagueGroup {
+      leagueName: string;
+      subDivision?: string;
+      headerKey: string;
+      fixtures: Fixture[];
     }
-    return Object.entries(map);
+
+    const groupMap = new Map<string, LeagueGroup>();
+
+    for (const f of paginatedFixtures) {
+      const baseLeague = f.leagueName || 'Premier League';
+      // If fixture has a distinct subdivision or tournament stage, categorize separately
+      const subDivision = f.stage && f.stage.trim() !== '' && f.stage.trim().toLowerCase() !== baseLeague.trim().toLowerCase()
+        ? f.stage.trim()
+        : undefined;
+
+      const headerKey = subDivision ? `${baseLeague} • ${subDivision}` : baseLeague;
+
+      if (!groupMap.has(headerKey)) {
+        groupMap.set(headerKey, {
+          leagueName: baseLeague,
+          subDivision,
+          headerKey,
+          fixtures: [],
+        });
+      }
+      groupMap.get(headerKey)!.fixtures.push(f);
+    }
+
+    const groups = Array.from(groupMap.values());
+    groups.sort((ga, gb) => {
+      const pa = getLeaguePriority(ga.fixtures[0]?.league, ga.fixtures[0]?.leagueName, ga.fixtures[0]?.stage);
+      const pb = getLeaguePriority(gb.fixtures[0]?.league, gb.fixtures[0]?.leagueName, gb.fixtures[0]?.stage);
+      if (pa !== pb) return pa - pb;
+      return ga.headerKey.localeCompare(gb.headerKey);
+    });
+
+    return groups;
   }, [paginatedFixtures]);
 
   return (
@@ -71,13 +111,15 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
       {groupedByLeague.length === 0 ? (
         <div className="p-8 text-center text-slate-500">No matches found.</div>
       ) : (
-        groupedByLeague.map(([leagueName, leagueFixtures]) => (
-          <div key={leagueName} className="rounded-2xl overflow-hidden shadow-xs bg-slate-50 dark:bg-slate-900/60">
-            {/* Unified App-Matching League Header */}
+        groupedByLeague.map((group) => (
+          <div key={group.headerKey} className="rounded-2xl overflow-hidden shadow-xs bg-slate-50 dark:bg-slate-900/60">
+            {/* Unified App-Matching League & Subdivision Header */}
             <div className="bg-slate-50 dark:bg-slate-900/60 px-3.5 py-2.5 flex items-center justify-between font-bold text-xs border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2 truncate text-slate-900 dark:text-white">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="truncate tracking-tight font-extrabold">{leagueName}</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="truncate tracking-tight font-extrabold">
+                  {group.subDivision || group.leagueName}
+                </span>
               </div>
               <div className="flex items-center gap-3 sm:gap-5 font-mono text-[11px] tracking-wider text-slate-500 dark:text-slate-400 pr-2">
                 <span>TIP</span>
@@ -89,7 +131,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
 
             {/* League Matches Table Rows */}
             <div className="divide-y divide-slate-100 dark:divide-slate-800/40 bg-white dark:bg-[#0B0F17]">
-              {leagueFixtures.map((fixture) => {
+              {group.fixtures.map((fixture) => {
                 const tipLabel = getTipLabel(fixture);
                 const kickOff = fixture.kickOffTime || '19:00';
 

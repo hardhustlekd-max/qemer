@@ -31,6 +31,24 @@ export interface HistoricalMatchSchema {
 
 export type ActiveProviderType = 'FLASHSCORE' | 'ESPN' | 'FOOTBALL_DATA_CO_UK' | 'BIG_BALLS_DATA' | 'FOOTBALL_DATA_ORG' | 'API_FOOTBALL';
 
+export interface DynamicStatisticItemSchema {
+  category: string;
+  homeValue?: string | number | null;
+  awayValue?: string | number | null;
+}
+
+export interface ParsedStatisticItemSchema {
+  category: string;
+  group: 'ALL' | 'OVERVIEW' | 'ATTACKING' | 'PASSING' | 'DEFENDING';
+  home_numeric: number;
+  home_raw: string;
+  away_numeric: number;
+  away_raw: string;
+  home_share_percent: number;
+  away_share_percent: number;
+  leader: 'HOME' | 'AWAY' | 'TIED';
+}
+
 export interface FlashscoreScrapedMatchSchema {
   match_id: string; // Primary Key e.g. 'dtULQoFG'
   stage?: string | null;
@@ -56,6 +74,7 @@ export interface UpcomingFixtureSchema {
   provider_id: ActiveProviderType | string; // Active provider e.g. 'espn' | 'ESPN'
   league: string; // Division code
   league_name: string; // League label
+  stage?: string | null; // Sub division or tournament stage
   match_date: string; // YYYY-MM-DD
   kick_off_time: string; // HH:MM
   home_team: string;
@@ -114,6 +133,15 @@ export interface SimplifiedTableLayoutSchema {
   is_simplified: boolean;
 }
 
+export interface LeaguePriorityRankingSchema {
+  tier_1_major_domestic: ('E0' | 'SP1' | 'D1' | 'I1' | 'F1')[]; // Premier League, La Liga, Bundesliga, Serie A, Ligue 1
+  tier_2_uefa_tournaments: ('UCL' | 'UEL' | 'UECL')[]; // Champions League, Europa League, Conference League
+  tier_3_secondary_and_cups: ('E1' | 'FAC' | 'CGB' | 'CDR' | 'DFB' | 'CIT' | 'CDF')[]; // Championship and major domestic cups
+  tier_4_global_top_flights: ('N1' | 'P1' | 'BRA' | 'MLS' | 'SPL' | 'TUR1' | 'SC0' | 'BE1' | 'ARG1' | 'MEX1' | 'JPL')[]; // Eredivisie, Primeira Liga, Serie A Brazil, MLS, etc.
+  prioritize_major_leagues_on_top: true;
+  updated_at: string;
+}
+
 export interface FixtureDisplayScopeSchema {
   date_filter: DateFilterScope;
   filter_type: 'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG';
@@ -121,6 +149,7 @@ export interface FixtureDisplayScopeSchema {
   default_display: 'ALL_UPCOMING_FIXTURES';
   fallback_to_upcoming_when_empty: boolean;
   league_priority_sorting: boolean;
+  major_popular_leagues_priority_top: boolean;
   prediction_pipeline: 'PREDICT_ALL_BEFORE_FILTERING';
   worldwide_leagues_coverage_count: number; // 50+ leagues, cups and international tournaments
 }
@@ -219,11 +248,6 @@ export interface FootballTipsCacheSchema {
 export interface PredictionMeasurementsSchema {
   fixture_id: string; // Primary Key
   h2h_json: string;
-  league_standing_json: string;
-  this_year_performance_json: string;
-  last_year_performance_json: string;
-  elo_rating_json: string;
-  combined_weights_json: string;
   calculated_at: string;
 }
 
@@ -347,11 +371,6 @@ export const DDL_STATEMENTS = {
     CREATE TABLE IF NOT EXISTS prediction_measurements_cache (
       fixture_id TEXT PRIMARY KEY,
       h2h_json TEXT NOT NULL,
-      league_standing_json TEXT NOT NULL,
-      this_year_performance_json TEXT NOT NULL,
-      last_year_performance_json TEXT NOT NULL,
-      elo_rating_json TEXT NOT NULL,
-      combined_weights_json TEXT NOT NULL,
       calculated_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_pred_measurements_fixture ON prediction_measurements_cache(fixture_id);
