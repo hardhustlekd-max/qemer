@@ -313,8 +313,11 @@ export class FlashscoreScraperService {
         if (seenMatchIds.has(m.matchId)) continue;
         seenMatchIds.add(m.matchId);
 
-        const matchDateObj = m.timestamp ? new Date(m.timestamp * 1000) : new Date();
-        const dateStr = matchDateObj.toISOString().slice(0, 10);
+        const matchDateObj = m.timestamp ? new Date((m.timestamp + 3 * 3600) * 1000) : new Date();
+        const year = matchDateObj.getUTCFullYear();
+        const month = String(matchDateObj.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(matchDateObj.getUTCDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
         const hours = String(matchDateObj.getUTCHours()).padStart(2, '0');
         const mins = String(matchDateObj.getUTCMinutes()).padStart(2, '0');
         const kickOffTime = `${hours}:${mins}`;
@@ -499,7 +502,7 @@ export class FlashscoreScraperService {
         if (seenHistIds.has(m.matchId)) continue;
         seenHistIds.add(m.matchId);
         const { code } = this.mapToLeagueCode(m.tournament, m.country);
-        const matchDateObj = m.timestamp ? new Date(m.timestamp * 1000) : new Date();
+        const matchDateObj = m.timestamp ? new Date((m.timestamp + 3 * 3600) * 1000) : new Date();
         const dateStr = matchDateObj.toISOString().slice(0, 10);
 
         const homeScore = m.homeScore!;
@@ -639,7 +642,7 @@ export class FlashscoreScraperService {
             const hG = parseInt(d['KU'] || '0', 10);
             const aG = parseInt(d['KT'] || '0', 10);
             const timestamp = parseInt(d['KC'] || '0', 10);
-            const dateStr = timestamp > 0 ? new Date(timestamp * 1000).toISOString().split('T')[0] : '';
+            const dateStr = timestamp > 0 ? new Date((timestamp + 3 * 3600) * 1000).toISOString().split('T')[0] : '';
 
             // Match alignment: check if rawHome aligns with fixtureHomeTeam
             let isHomeFixture = true;

@@ -94,8 +94,10 @@ export default function App() {
       setIsLoadingFixtures(true);
       const data = await EngineService.getFixtures('ALL');
       setFixtures(data);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to fetch fixtures:', e);
+      showNotification('Server Error: ' + (e?.message || 'Failed to fetch fixtures from server'), 'info');
+      setFixtures([]);
     } finally {
       setIsLoadingFixtures(false);
     }

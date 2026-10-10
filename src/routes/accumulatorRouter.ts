@@ -30,7 +30,24 @@ async function handlePrebuiltGeneration(req: any, res: any) {
     } else {
       const provider = providerManager.getActiveProvider();
       const rawFixtures = await provider.getUpcomingFixtures();
-      const allMatches = db.getAllHistoricalMatches(1500);
+      const rawHist = db.getAllHistoricalMatches(1500);
+      const scrapedMatches = db.getFlashscoreScrapedMatches(500);
+      const scrapedAsHistorical: any[] = scrapedMatches
+        .filter((sm) => sm.result?.home !== undefined && sm.result?.away !== undefined)
+        .map((sm) => ({
+          date: sm.date || new Date().toISOString().split('T')[0],
+          div: sm.league || 'ALL',
+          homeTeam: sm.homeTeam,
+          awayTeam: sm.awayTeam,
+          fthg: sm.result.home,
+          ftag: sm.result.away,
+          ftr: sm.result.home > sm.result.away ? 'H' : sm.result.home < sm.result.away ? 'A' : 'D',
+          hs: sm.stats?.homeShots || 0,
+          as: sm.stats?.awayShots || 0,
+          hst: sm.stats?.homeShotsOnTarget || 0,
+          ast: sm.stats?.awayShotsOnTarget || 0,
+        }));
+      const allMatches = [...scrapedAsHistorical, ...rawHist];
 
       fixturesToUse = rawFixtures.map((f) => {
         const leagueMatches = allMatches.filter((m) => m.div.toUpperCase() === f.league.toUpperCase());

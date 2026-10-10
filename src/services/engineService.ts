@@ -80,21 +80,11 @@ export class EngineService {
     const url = query ? `/api/fixtures?${query}` : '/api/fixtures';
     const serverData = await this.safeJsonFetch(url);
 
-    if (serverData && serverData.success && Array.isArray(serverData.fixtures) && serverData.fixtures.length > 0) {
+    if (serverData && serverData.success && Array.isArray(serverData.fixtures)) {
       return serverData.fixtures;
     }
 
-    if (localUpcomingFixtures.length === 0) {
-      try {
-        const { flashscoreScraperService } = await import('./flashscoreScraperService.js');
-        localUpcomingFixtures = await flashscoreScraperService.getUpcomingFixtures();
-      } catch {
-        // Fallback to initial dataset if scraper fails
-      }
-    }
-
-    // Client-side fallback calculation with pure Poisson mathematical engine
-    return this.calculateLocalFixtures(league, dateFilter, customStartDate, customEndDate);
+    throw new Error(serverData?.error || 'Failed to fetch fixtures from server');
   }
 
   /**
