@@ -771,20 +771,20 @@ export class FlashscoreScraperService {
       }
     }
 
-    // Default clean 0 encounters
-    const fallbackEmpty: HeadToHeadMeasurement = {
+    // Zero encounters between teams in real records
+    const cleanZeroH2H: HeadToHeadMeasurement = {
       matchesCount: 0,
       homeWins: 0,
       draws: 0,
       awayWins: 0,
-      homeGoalsAvg: 1.5,
-      awayGoalsAvg: 1.2,
+      homeGoalsAvg: 0,
+      awayGoalsAvg: 0,
       h2hMultiplierHome: 1.0,
       h2hMultiplierAway: 1.0,
       recentH2H: [],
     };
-    this.cacheH2H.set(cleanId, fallbackEmpty);
-    return fallbackEmpty;
+    this.cacheH2H.set(cleanId, cleanZeroH2H);
+    return cleanZeroH2H;
   }
 }
 

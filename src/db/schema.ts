@@ -147,7 +147,8 @@ export interface FixtureDisplayScopeSchema {
   filter_type: 'ALL' | 'POSITIVE_EV' | 'BANKER' | 'HIGH_XG';
   sort_order: 'LEAGUE_PRIORITY_AND_TIME' | 'CHRONOLOGICAL_TIME' | 'PROBABILITY_RANK';
   default_display: 'ALL_UPCOMING_FIXTURES';
-  fallback_to_upcoming_when_empty: boolean;
+  fallback_to_upcoming_when_empty: false;
+  use_fallback_mock_data: false;
   league_priority_sorting: boolean;
   major_popular_leagues_priority_top: boolean;
   prediction_pipeline: 'PREDICT_ALL_BEFORE_FILTERING';
@@ -220,7 +221,7 @@ export interface MatchDetailModalLayoutSchema {
     club_crests: true;
     win_probability_pills: true;
     live_inplay_indicator: true;
-    quick_projections_strip: true;
+    quick_projections_list: false;
   };
   segmented_subtabs: ('OVERVIEW' | 'H2H' | 'STATS' | 'TEAMS')[];
   tab_labels: {
@@ -235,13 +236,26 @@ export interface MatchDetailModalLayoutSchema {
   default_tab: 'OVERVIEW';
   sections: {
     outcome_probabilities_gauge: true;
-    market_projections_grid: true;
+    outcome_probabilities_projections_list: true;
+    market_projections_list: true;
     most_probable_scorelines: true;
     poisson_probability_heatmap: true;
     head_to_head_live_sync: true;
     dynamic_statistics_breakdown: true;
     team_form_and_ratings: true;
   };
+  info_cards_layout: {
+    outcome_probabilities_projections: 'list';
+    market_projections: 'list';
+    venue_details: 'list';
+    head_to_head_metrics: 'list';
+    team_ratings: 'list';
+  };
+  head_to_head_header: {
+    show_previous_encounters_count: false;
+    header_style: 'standard_title_case_bold';
+  };
+  section_header_styling: 'standard_title_case_bold';
   design_system_compliant: true;
   no_slash_alternative_texts: true;
   compact_non_verbose_labels: true;
@@ -311,6 +325,7 @@ export interface PredictionMeasurementsSchema {
   fixture_id: string; // Primary Key
   h2h_json: string;
   calculated_at: string;
+  use_mockup_fallback_data: false;
 }
 
 export interface FlashscoreScrapedH2HSchema {
@@ -326,6 +341,7 @@ export interface FlashscoreScrapedH2HSchema {
   encounters_json: string; // Serialized HeadToHeadMatchRecord[]
   scraped_feed: 'df_hh_1';
   scraped_at: string;
+  fallback_mockup_data: false;
 }
 
 export const DDL_STATEMENTS = {

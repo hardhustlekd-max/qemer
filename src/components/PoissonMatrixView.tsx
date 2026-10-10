@@ -35,7 +35,7 @@ export const PoissonMatrixView: React.FC<PoissonMatrixViewProps> = ({
   return (
     <div className="space-y-3 font-sans">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+        <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
           Scoreline Probability Heatmap
         </h4>
         <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
@@ -88,7 +88,7 @@ export const PoissonMatrixView: React.FC<PoissonMatrixViewProps> = ({
       {/* Top Correct Scores breakdown (optional) */}
       {showTopScores && (
         <div className="pt-2">
-          <h5 className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2">
+          <h5 className="text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-2">
             Top Scorelines
           </h5>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">

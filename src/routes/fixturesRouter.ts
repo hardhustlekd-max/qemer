@@ -217,11 +217,16 @@ fixturesRouter.get('/:id', async (req, res) => {
     const leagueMatches = allMatches.filter((m) => m.div.toUpperCase() === f.league.toUpperCase());
     const historicalContext = leagueMatches.length >= 10 ? leagueMatches : allMatches;
 
+    // Scrape real head-to-head match history directly from Flashscore feed
+    const cleanId = (f.id || fixtureId).replace(/^fs_/, '');
+    const realH2H = await flashscoreScraperService.getMatchHeadToHead(cleanId, f.homeTeam, f.awayTeam);
+
     const { prediction, homeStats, awayStats } = PoissonEngine.predictMatch(
       f.homeTeam,
       f.awayTeam,
       historicalContext,
-      settings
+      settings,
+      realH2H
     );
 
     const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(
@@ -231,14 +236,6 @@ fixturesRouter.get('/:id', async (req, res) => {
       f.homeTeam,
       f.awayTeam
     );
-
-    // Scrape real head-to-head match history from Flashscore
-    const cleanId = (f.id || fixtureId).replace(/^fs_/, '');
-    const realH2H = await flashscoreScraperService.getMatchHeadToHead(cleanId, f.homeTeam, f.awayTeam);
-    prediction.measurements = {
-      ...(prediction.measurements || {}),
-      h2h: realH2H,
-    };
 
     // Look up scraped matches from SQLite cache
     const scrapedMatches = db.getFlashscoreScrapedMatches(500);

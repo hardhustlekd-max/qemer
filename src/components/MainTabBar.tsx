@@ -127,7 +127,7 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
             {isFilterOpen && (
               <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-[#0B0F17] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[9999] p-4 space-y-3 font-sans animate-in fade-in zoom-in-95 duration-100">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Match Filters</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Match Filters</span>
                   <button 
                     type="button"
                     onClick={() => setIsFilterOpen(false)}

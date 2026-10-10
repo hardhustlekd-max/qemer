@@ -196,8 +196,8 @@ export class PoissonEngine {
     }
 
     const matchesCount = h2hMatches.length;
-    const homeGoalsAvg = matchesCount > 0 ? Number((homeGoalsTotal / matchesCount).toFixed(2)) : 1.5;
-    const awayGoalsAvg = matchesCount > 0 ? Number((awayGoalsTotal / matchesCount).toFixed(2)) : 1.2;
+    const homeGoalsAvg = matchesCount > 0 ? Number((homeGoalsTotal / matchesCount).toFixed(2)) : 0;
+    const awayGoalsAvg = matchesCount > 0 ? Number((awayGoalsTotal / matchesCount).toFixed(2)) : 0;
 
     let h2hMultiplierHome = 1.0;
     let h2hMultiplierAway = 1.0;
@@ -231,7 +231,8 @@ export class PoissonEngine {
     homeTeam: string,
     awayTeam: string,
     leagueHistoricalMatches: HistoricalMatch[],
-    settings: EngineSettings
+    settings: EngineSettings,
+    realScrapedH2H?: HeadToHeadMeasurement | null
   ): { prediction: PoissonPrediction; homeStats: TeamStatsSummary; awayStats: TeamStatsSummary } {
     const homeStats = this.computeTeamStats(
       homeTeam,
@@ -257,8 +258,10 @@ export class PoissonEngine {
       leagueAwayAvg = totA / leagueHistoricalMatches.length;
     }
 
-    // Head-to-Head (H2H) Measurement from scraped match records
-    const h2h = this.computeHeadToHead(homeTeam, awayTeam, leagueHistoricalMatches);
+    // Use direct scraped H2H if provided, or compute strictly from scraped match records
+    const h2h = (realScrapedH2H && realScrapedH2H.matchesCount > 0)
+      ? realScrapedH2H
+      : this.computeHeadToHead(homeTeam, awayTeam, leagueHistoricalMatches);
 
     const measurements: PredictionEngineMeasurements = {
       h2h,

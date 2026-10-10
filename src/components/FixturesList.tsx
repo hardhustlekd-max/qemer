@@ -144,19 +144,6 @@ export const FixturesList: React.FC<FixturesListProps> = ({
       return true;
     });
 
-    // Graceful fallback: If TODAY has 0 matches for this specific league selection, show all upcoming matches
-    if (matches.length === 0 && dateFilter === 'TODAY' && fixtures.length > 0) {
-      matches = fixtures.filter((f) => {
-        if (selectedLeague !== 'ALL' && f.league.toUpperCase() !== selectedLeague.toUpperCase()) return false;
-        if (searchQuery.trim().length > 0) {
-          const query = searchQuery.toLowerCase();
-          const matchName = `${f.homeTeam} ${f.awayTeam} ${f.leagueName}`.toLowerCase();
-          if (!matchName.includes(query)) return false;
-        }
-        return true;
-      });
-    }
-
     return matches.slice().sort((a, b) => {
       const priorityA = getLeaguePriority(a.league, a.leagueName, a.stage);
       const priorityB = getLeaguePriority(b.league, b.leagueName, b.stage);
