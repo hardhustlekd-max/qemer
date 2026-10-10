@@ -6,6 +6,7 @@ import {
   HistoricalMatch,
   MarketOption,
   TrendingTipsData,
+  HeadToHeadMeasurement,
 } from '../core/types.js';
 import { PoissonEngine } from '../core/poisson.js';
 import { AccumulatorGenerator, AccaGenerationParams, isMatchStarted } from '../core/accumulator.js';
@@ -268,6 +269,44 @@ export class EngineService {
       totalTeams: uniqueTeams.size,
       leagues,
     };
+  }
+
+  /**
+   * Fetches full match detail including real scraped H2H measurements
+   */
+  public static async getMatchDetail(fixtureId: string): Promise<Fixture | null> {
+    const serverData = await this.safeJsonFetch(`/api/fixtures/${fixtureId}`);
+    if (serverData && serverData.success && serverData.fixture) {
+      return serverData.fixture;
+    }
+    return null;
+  }
+
+  /**
+   * Fetches real scraped Head-to-Head (H2H) records for a specific match
+   */
+  public static async getMatchHeadToHead(
+    fixtureId: string,
+    homeTeam?: string,
+    awayTeam?: string
+  ): Promise<HeadToHeadMeasurement | null> {
+    const params = new URLSearchParams();
+    if (homeTeam) params.set('home', homeTeam);
+    if (awayTeam) params.set('away', awayTeam);
+    const query = params.toString() ? `?${params.toString()}` : '';
+
+    const serverData = await this.safeJsonFetch(`/api/fixtures/${fixtureId}/h2h${query}`);
+    if (serverData && serverData.success && serverData.h2h) {
+      return serverData.h2h;
+    }
+
+    // Try detail endpoint fallback
+    const detailData = await this.safeJsonFetch(`/api/fixtures/${fixtureId}`);
+    if (detailData && detailData.success && detailData.fixture?.prediction?.measurements?.h2h) {
+      return detailData.fixture.prediction.measurements.h2h;
+    }
+
+    return null;
   }
 
   /**

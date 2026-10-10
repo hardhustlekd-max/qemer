@@ -7,7 +7,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  BarChart2,
 } from 'lucide-react';
 
 interface SimplifiedPredictionsWireframeProps {
@@ -107,25 +106,31 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
   }, [paginatedFixtures]);
 
   return (
-    <div className="w-full max-w-full bg-white dark:bg-[#0B0F17] rounded-3xl shadow-xs overflow-hidden text-slate-900 dark:text-slate-100 font-sans transition-all space-y-3 p-2 sm:p-3">
+    <div className="w-full max-w-full space-y-3 text-slate-900 dark:text-slate-100 font-sans">
       {groupedByLeague.length === 0 ? (
-        <div className="p-8 text-center text-slate-500">No matches found.</div>
+        <div className="p-8 text-center text-slate-500 bg-white dark:bg-[#0B0F17] rounded-xl border border-slate-200/80 dark:border-slate-800">No matches found.</div>
       ) : (
         groupedByLeague.map((group) => (
-          <div key={group.headerKey} className="rounded-2xl overflow-hidden shadow-xs bg-slate-50 dark:bg-slate-900/60">
-            {/* Unified App-Matching League & Subdivision Header */}
-            <div className="bg-slate-50 dark:bg-slate-900/60 px-3.5 py-2.5 flex items-center justify-between font-bold text-xs border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2 truncate text-slate-900 dark:text-white">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="truncate tracking-tight font-extrabold">
+          <div key={group.headerKey} className="border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-[#0B0F17] shadow-xs">
+            {/* Unified League Header with Pixel-Perfect Column Alignment */}
+            <div className="bg-slate-50 dark:bg-slate-900/80 grid grid-cols-12 items-center px-3.5 sm:px-4 py-2 border-b border-slate-200/80 dark:border-slate-800 gap-2 font-bold text-xs select-none">
+              {/* League & Subdivision Title (matches col-span-7) */}
+              <div className="col-span-7 flex items-center min-w-0 pr-2">
+                <span className="truncate whitespace-nowrap tracking-tight font-extrabold text-slate-900 dark:text-white">
                   {group.subDivision || group.leagueName}
                 </span>
               </div>
-              <div className="flex items-center gap-3 sm:gap-5 font-mono text-[11px] tracking-wider text-slate-500 dark:text-slate-400 pr-2">
+
+              {/* TIP Column Header (matches col-span-2, perfectly centered) */}
+              <div className="col-span-2 flex items-center justify-center font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0 tracking-wider">
                 <span>TIP</span>
-                <span>1</span>
-                <span>X</span>
-                <span>2</span>
+              </div>
+
+              {/* 1, X, 2 Column Headers (matches col-span-3 with identical item widths) */}
+              <div className="col-span-3 flex items-center justify-end gap-1 font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0 tracking-wider">
+                <span className="w-7 sm:w-8 text-center shrink-0">1</span>
+                <span className="w-7 sm:w-8 text-center shrink-0">X</span>
+                <span className="w-7 sm:w-8 text-center shrink-0">2</span>
               </div>
             </div>
 
@@ -151,57 +156,110 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
                   <div
                     key={fixture.id}
                     onClick={() => onSelectDetail(fixture)}
-                    className="grid grid-cols-12 items-center px-3 sm:px-4 py-2.5 hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-all cursor-pointer gap-2"
+                    className="grid grid-cols-12 items-center px-3.5 sm:px-4 py-2 hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-colors cursor-pointer gap-2"
                   >
-                    {/* Time, Date & Score */}
-                    <div className="col-span-2 flex flex-col justify-center font-mono text-xs text-slate-500 dark:text-slate-400">
-                      <span className="font-bold">{kickOff}</span>
-                      <span className="text-[10px] text-slate-400 font-medium">{fixture.matchDate}</span>
-                      {fixture.score && fixture.score.home !== undefined && (
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                          {fixture.score.home}:{fixture.score.away}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Stacked Teams */}
-                    <div className="col-span-5 flex flex-col justify-center min-w-0 overflow-hidden">
-                      <div className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                        {fixture.homeTeam}
+                    {/* Match Clubs & Schedule Metadata */}
+                    <div className="col-span-7 flex flex-col justify-center min-w-0 pr-2">
+                      {/* Home Team */}
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {fixture.homeBadge && (
+                            <img
+                              src={fixture.homeBadge}
+                              alt=""
+                              className="w-4 h-4 object-contain shrink-0 rounded-full"
+                              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                            />
+                          )}
+                          <span
+                            className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate whitespace-nowrap"
+                            title={fixture.homeTeam}
+                          >
+                            {fixture.homeTeam}
+                          </span>
+                        </div>
+                        {fixture.score && fixture.score.home !== undefined && (
+                          <span className="font-mono font-bold text-xs text-slate-900 dark:text-white shrink-0">
+                            {fixture.score.home}
+                          </span>
+                        )}
                       </div>
-                      <div className="font-medium text-xs text-slate-600 dark:text-slate-300 truncate">
-                        {fixture.awayTeam}
+
+                      {/* Away Team */}
+                      <div className="flex items-center justify-between gap-2 min-w-0 mt-0.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {fixture.awayBadge && (
+                            <img
+                              src={fixture.awayBadge}
+                              alt=""
+                              className="w-4 h-4 object-contain shrink-0 rounded-full"
+                              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                            />
+                          )}
+                          <span
+                            className="font-medium text-xs sm:text-sm text-slate-700 dark:text-slate-300 truncate whitespace-nowrap"
+                            title={fixture.awayTeam}
+                          >
+                            {fixture.awayTeam}
+                          </span>
+                        </div>
+                        {fixture.score && fixture.score.away !== undefined && (
+                          <span className="font-mono font-bold text-xs text-slate-900 dark:text-white shrink-0">
+                            {fixture.score.away}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Date & Time Under Clubs */}
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] font-mono text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">
+                        <span className="text-slate-600 dark:text-slate-300 font-semibold">{kickOff}</span>
+                        <span className="text-slate-300 dark:text-slate-700">•</span>
+                        <span>{fixture.matchDate}</span>
+                        {fixture.status === 'LIVE' && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-700">•</span>
+                            <span className="text-rose-500 font-bold flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                              {fixture.minute ? `${fixture.minute}'` : 'LIVE'}
+                            </span>
+                          </>
+                        )}
+                        {fixture.status === 'FINISHED' && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-700">•</span>
+                            <span className="text-slate-500 dark:text-slate-400 font-bold">FT</span>
+                          </>
+                        )}
                       </div>
                     </div>
 
                     {/* TIP Column */}
-                    <div className="col-span-2 flex items-center justify-center font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                      <span className="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-2xs">
+                    <div className="col-span-2 flex items-center justify-center font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
                         {tipLabel}
                       </span>
                     </div>
 
-                    {/* 1, X, 2 Percentage Probability Boxes & Chart Icon */}
-                    <div className="col-span-3 flex items-center justify-end gap-1 font-mono text-xs font-bold">
+                    {/* 1, X, 2 Percentage Probability Boxes */}
+                    <div className="col-span-3 flex items-center justify-end gap-1 font-mono text-xs font-bold shrink-0 whitespace-nowrap">
                       {/* Home 1 */}
-                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded-lg text-[11px] shadow-2xs ${
+                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded-md text-[11px] whitespace-nowrap shrink-0 ${
                         homeProb >= 50 ? 'bg-emerald-600 text-white' : homeProb >= 35 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}>
                         {homeProb}
                       </span>
                       {/* Draw X */}
-                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded-lg text-[11px] shadow-2xs ${
+                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded-md text-[11px] whitespace-nowrap shrink-0 ${
                         drawProb >= 35 ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}>
                         {drawProb}
                       </span>
                       {/* Away 2 */}
-                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded-lg text-[11px] shadow-2xs ${
+                      <span className={`w-7 h-6 sm:w-8 sm:h-7 flex items-center justify-center rounded-md text-[11px] whitespace-nowrap shrink-0 ${
                         awayProb >= 50 ? 'bg-emerald-600 text-white' : awayProb >= 35 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}>
                         {awayProb}
                       </span>
-                      <BarChart2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 ml-1 shrink-0 hidden sm:block" />
                     </div>
                   </div>
                 );
@@ -213,7 +271,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
 
       {/* Table Pagination Bar */}
       {fixtures.length > 0 && (
-        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/60 flex flex-wrap items-center justify-between gap-2 text-xs rounded-2xl shadow-xs">
+        <div className="px-4 py-2.5 bg-white dark:bg-[#0B0F17] border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs rounded-xl shadow-xs">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <span className="text-slate-500 dark:text-slate-400 font-medium text-xs whitespace-nowrap">
               Showing <span className="font-bold text-slate-900 dark:text-white">{startItemIndex}–{endItemIndex}</span> of <span className="font-bold text-slate-900 dark:text-white">{fixtures.length}</span> matches
@@ -227,7 +285,7 @@ export const SimplifiedPredictionsWireframe: React.FC<SimplifiedPredictionsWiref
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-white dark:bg-slate-950 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none shadow-xs"
+                className="bg-slate-50 dark:bg-slate-900 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 dark:text-white appearance-none cursor-pointer pr-7 focus:outline-none"
               >
                 <option value={5} className="bg-white dark:bg-slate-900">5 per page</option>
                 <option value={10} className="bg-white dark:bg-slate-900">10 per page</option>

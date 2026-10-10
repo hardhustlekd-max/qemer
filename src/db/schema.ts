@@ -200,6 +200,9 @@ export interface DesignSystemComplianceSchema {
     compact_headers: true;
     no_verbose_descriptions: true;
     no_slash_alternatives: true;
+    anti_text_wrapping_enforced: true;
+    whitespace_nowrap_badges_and_labels: true;
+    base_html_scaling_normalized: '100%';
   };
   radii: {
     outer_card: 'rounded-3xl';
@@ -207,6 +210,65 @@ export interface DesignSystemComplianceSchema {
     button_or_pill: 'rounded-xl';
     badge: 'rounded-lg';
   };
+  updated_at: string;
+}
+
+export interface MatchDetailModalLayoutSchema {
+  modal_surface: 'borderless_shadow_rounded_3xl';
+  hero_scoreboard_banner: {
+    layout: '3_column_hero_banner';
+    club_crests: true;
+    win_probability_pills: true;
+    live_inplay_indicator: true;
+    quick_projections_strip: true;
+  };
+  segmented_subtabs: ('OVERVIEW' | 'H2H' | 'STATS' | 'TEAMS')[];
+  tab_labels: {
+    OVERVIEW: 'Overview';
+    H2H: 'H2H';
+    STATS: 'Statistics';
+    TEAMS: 'Team Form';
+  };
+  tabs_icons_enabled: false;
+  tabs_prevent_wrap: true;
+  tabs_overflow_control: 'no_scrollbar_scroll_guard';
+  default_tab: 'OVERVIEW';
+  sections: {
+    outcome_probabilities_gauge: true;
+    market_projections_grid: true;
+    most_probable_scorelines: true;
+    poisson_probability_heatmap: true;
+    head_to_head_live_sync: true;
+    dynamic_statistics_breakdown: true;
+    team_form_and_ratings: true;
+  };
+  design_system_compliant: true;
+  no_slash_alternative_texts: true;
+  compact_non_verbose_labels: true;
+  updated_at: string;
+}
+
+export interface PredictionsWireframeLayoutSchema {
+  date_time_column_removed: true;
+  date_time_placement: 'UNDER_CLUBS_NAME';
+  clubs_column_span: 7;
+  tip_column_span: 2;
+  probabilities_column_span: 3;
+  column_header_alignment_mode: 'STRICT_GRID_12_COL';
+  column_headers: {
+    clubs_header: 'LEAGUE_SUBDIVISION';
+    tip_header: 'TIP';
+    probabilities_headers: ['1', 'X', '2'];
+  };
+  overdesign_elements_removed: true;
+  card_within_card_nesting_eliminated: true;
+  decorative_chart_icons_removed: true;
+  decorative_header_bullets_removed: true;
+  pill_bloat_and_fuzzy_shadows_removed: true;
+  design_system_radius_normalized: true;
+  club_crests_enabled: true;
+  date_time_separator: '•';
+  live_and_ft_status_integrated: true;
   updated_at: string;
 }
 
@@ -249,6 +311,21 @@ export interface PredictionMeasurementsSchema {
   fixture_id: string; // Primary Key
   h2h_json: string;
   calculated_at: string;
+}
+
+export interface FlashscoreScrapedH2HSchema {
+  match_id: string; // Primary Key
+  matches_count: number;
+  home_wins: number;
+  draws: number;
+  away_wins: number;
+  home_goals_avg: number;
+  away_goals_avg: number;
+  h2h_multiplier_home: number;
+  h2h_multiplier_away: number;
+  encounters_json: string; // Serialized HeadToHeadMatchRecord[]
+  scraped_feed: 'df_hh_1';
+  scraped_at: string;
 }
 
 export const DDL_STATEMENTS = {

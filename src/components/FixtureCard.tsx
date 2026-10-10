@@ -29,28 +29,28 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
     >
       <div>
         {/* Top bar: League, Time, Stage / Status */}
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-2xs">
+        <div className="flex items-center justify-between gap-2 mb-3 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-nowrap overflow-hidden">
+            <span className="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-2xs truncate whitespace-nowrap max-w-[150px] sm:max-w-[200px]" title={fixture.stage || fixture.leagueName}>
               {fixture.stage || fixture.leagueName}
             </span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap shrink-0">
               {fixture.kickOffTime}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
             {fixture.status === 'LIVE' ? (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 shadow-2xs">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 shadow-2xs whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
                 LIVE
               </span>
             ) : fixture.status === 'FINISHED' ? (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 whitespace-nowrap">
                 FT
               </span>
             ) : (
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-500">
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-500 whitespace-nowrap">
                 {fixture.matchDate}
               </span>
             )}
@@ -60,8 +60,8 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
         {/* Teams & Expected Goals Display */}
         <div className="grid grid-cols-12 items-center gap-2 my-2">
           {/* Home Team */}
-          <div className="col-span-5 flex flex-col">
-            <div className="flex items-center gap-1.5 min-w-0">
+          <div className="col-span-5 flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
               {fixture.homeBadge && (
                 <img
                   src={fixture.homeBadge}
@@ -70,34 +70,34 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
                   onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                 />
               )}
-              <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate" title={fixture.homeTeam}>
+              <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate whitespace-nowrap" title={fixture.homeTeam}>
                 {fixture.homeTeam}
               </span>
               {pred?.homeWinProb !== undefined && (
-                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-950 text-emerald-600 dark:text-emerald-400 shadow-xs shrink-0" title={`${fixture.homeTeam} Win Probability: ${Math.round(pred.homeWinProb * 100)}%`}>
+                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-950 text-emerald-600 dark:text-emerald-400 shadow-xs shrink-0 whitespace-nowrap" title={`${fixture.homeTeam} Win: ${Math.round(pred.homeWinProb * 100)}%`}>
                   {Math.round(pred.homeWinProb * 100)}%
                 </span>
               )}
             </div>
             {pred && (
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap shrink-0">
                 xG: <strong className="text-emerald-600 dark:text-emerald-400">{pred.homeXG}</strong>
               </span>
             )}
           </div>
 
           {/* VS Divider or Match Score */}
-          <div className="col-span-2 flex flex-col items-center justify-center">
+          <div className="col-span-2 flex flex-col items-center justify-center shrink-0">
             {fixture.score && fixture.score.home !== undefined ? (
-              <span className="text-xs sm:text-sm font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+              <span className="text-xs sm:text-sm font-mono font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                 {fixture.score.home}:{fixture.score.away}
               </span>
             ) : (
-              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">VS</span>
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap">VS</span>
             )}
             <button
               onClick={() => onSelectDetail(fixture)}
-              className="mt-0.5 text-[10px] text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-0.5 transition-colors cursor-pointer"
+              className="mt-0.5 text-[10px] text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-0.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               title="View Poisson probability matrix"
             >
               <Info className="w-3 h-3" />
@@ -106,14 +106,14 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           </div>
 
           {/* Away Team */}
-          <div className="col-span-5 flex flex-col items-end text-right">
-            <div className="flex items-center justify-end gap-1.5 min-w-0">
+          <div className="col-span-5 flex flex-col items-end text-right min-w-0">
+            <div className="flex items-center justify-end gap-1.5 min-w-0 flex-nowrap w-full">
               {pred?.awayWinProb !== undefined && (
-                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-950 text-cyan-600 dark:text-cyan-400 shadow-xs shrink-0" title={`${fixture.awayTeam} Win Probability: ${Math.round(pred.awayWinProb * 100)}%`}>
+                <span className="font-mono text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-950 text-cyan-600 dark:text-cyan-400 shadow-xs shrink-0 whitespace-nowrap" title={`${fixture.awayTeam} Win: ${Math.round(pred.awayWinProb * 100)}%`}>
                   {Math.round(pred.awayWinProb * 100)}%
                 </span>
               )}
-              <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate" title={fixture.awayTeam}>
+              <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate whitespace-nowrap" title={fixture.awayTeam}>
                 {fixture.awayTeam}
               </span>
               {fixture.awayBadge && (
@@ -126,7 +126,7 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
               )}
             </div>
             {pred && (
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap shrink-0">
                 xG: <strong className="text-cyan-600 dark:text-cyan-400">{pred.awayXG}</strong>
               </span>
             )}
@@ -171,10 +171,10 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
 
         {/* Highest Predicted Outcome */}
         {topPredictionLabel && (
-          <div className="mt-2 mb-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-xs shadow-xs">
-            <div className="flex items-center gap-1.5 truncate">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Predicted Outcome:</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">{topPredictionLabel}</span>
+          <div className="mt-2 mb-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between text-xs shadow-xs min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0 truncate flex-nowrap w-full">
+              <span className="text-[10px] font-bold uppercase text-slate-400 shrink-0 whitespace-nowrap">Predicted Outcome:</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate whitespace-nowrap">{topPredictionLabel}</span>
             </div>
           </div>
         )}
@@ -186,10 +186,10 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           <button
             type="button"
             onClick={() => onSelectDetail(fixture)}
-            className="p-1.5 rounded-xl text-center bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
+            className="p-1.5 rounded-xl text-center bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs whitespace-nowrap"
           >
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">Home</span>
-            <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium whitespace-nowrap">Home</span>
+            <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
               {Math.round(pred.homeWinProb * 100)}%
             </span>
           </button>
@@ -197,10 +197,10 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           <button
             type="button"
             onClick={() => onSelectDetail(fixture)}
-            className="p-1.5 rounded-xl text-center bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
+            className="p-1.5 rounded-xl text-center bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs whitespace-nowrap"
           >
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">Draw</span>
-            <span className="font-mono font-bold text-xs text-amber-600 dark:text-amber-400">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium whitespace-nowrap">Draw</span>
+            <span className="font-mono font-bold text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">
               {Math.round(pred.drawProb * 100)}%
             </span>
           </button>
@@ -208,10 +208,10 @@ export const FixtureCard: React.FC<FixtureCardProps> = ({
           <button
             type="button"
             onClick={() => onSelectDetail(fixture)}
-            className="p-1.5 rounded-xl text-center bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
+            className="p-1.5 rounded-xl text-center bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs whitespace-nowrap"
           >
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">Away</span>
-            <span className="font-mono font-bold text-xs text-cyan-600 dark:text-cyan-400">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium whitespace-nowrap">Away</span>
+            <span className="font-mono font-bold text-xs text-cyan-600 dark:text-cyan-400 whitespace-nowrap">
               {Math.round(pred.awayWinProb * 100)}%
             </span>
           </button>

@@ -6,6 +6,7 @@ import { EngineSettings, Fixture } from '../core/types.js';
 import { getRelativeDateStr } from '../core/seedData.js';
 import { isMatchStarted } from '../core/accumulator.js';
 import { getLeaguePriority } from '../core/leaguePriority.js';
+import { flashscoreScraperService } from '../services/flashscoreScraperService.js';
 
 export const fixturesRouter = Router();
 
@@ -175,12 +176,28 @@ fixturesRouter.get('/history', async (req, res) => {
   }
 });
 
+fixturesRouter.get('/:id/h2h', async (req, res) => {
+  try {
+    const fixtureId = req.params.id;
+    const homeTeam = req.query.home as string | undefined;
+    const awayTeam = req.query.away as string | undefined;
+    const cleanId = fixtureId.replace(/^fs_/, '');
+    const h2h = await flashscoreScraperService.getMatchHeadToHead(cleanId, homeTeam, awayTeam);
+    res.json({ success: true, h2h });
+  } catch (err: any) {
+    console.error('Error fetching fixture H2H:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Failed to fetch H2H' });
+  }
+});
+
 fixturesRouter.get('/:id', async (req, res) => {
   try {
     const fixtureId = req.params.id;
     const provider = providerManager.getActiveProvider();
     const fixtures = await provider.getUpcomingFixtures();
-    const f = fixtures.find((item) => item.id === fixtureId);
+    const f = fixtures.find(
+      (item) => item.id === fixtureId || item.id === `fs_${fixtureId}` || item.id.replace('fs_', '') === fixtureId
+    );
 
     if (!f) {
       return res.status(404).json({ success: false, error: 'Fixture not found' });
@@ -215,12 +232,13 @@ fixturesRouter.get('/:id', async (req, res) => {
       f.awayTeam
     );
 
-    // Also get direct head-to-head matches
-    const h2hMatches = allMatches.filter(
-      (m) =>
-        (m.homeTeam.toLowerCase() === f.homeTeam.toLowerCase() && m.awayTeam.toLowerCase() === f.awayTeam.toLowerCase()) ||
-        (m.homeTeam.toLowerCase() === f.awayTeam.toLowerCase() && m.awayTeam.toLowerCase() === f.homeTeam.toLowerCase())
-    );
+    // Scrape real head-to-head match history from Flashscore
+    const cleanId = (f.id || fixtureId).replace(/^fs_/, '');
+    const realH2H = await flashscoreScraperService.getMatchHeadToHead(cleanId, f.homeTeam, f.awayTeam);
+    prediction.measurements = {
+      ...(prediction.measurements || {}),
+      h2h: realH2H,
+    };
 
     // Look up scraped matches from SQLite cache
     const scrapedMatches = db.getFlashscoreScrapedMatches(500);
@@ -259,7 +277,7 @@ fixturesRouter.get('/:id', async (req, res) => {
         bestValueMarket,
         homeStats,
         awayStats,
-        h2hMatches,
+        h2hMatches: realH2H.recentH2H,
         measurements: prediction.measurements,
       },
     });

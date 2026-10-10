@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Sparkles, Menu, Zap } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { EngineSettings, ProviderStatus } from '../core/types.js';
 
 interface HeaderProps {
@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
 }) => {
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md px-4 lg:px-8 py-2.5 transition-colors shadow-xs">
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md px-4 lg:px-8 py-2.5 transition-colors border-b border-slate-100 dark:border-slate-800 shadow-xs">
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
         {/* Brand & Status */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -37,11 +37,11 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
+              <h1 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight truncate whitespace-nowrap">
                 QEMER PREDICTIONS
               </h1>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
+            <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate whitespace-nowrap">
               Predictions and Accumulators
             </p>
           </div>
@@ -49,31 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 shrink-0">
-          {onSelectAccaCategory && (
-            <>
-              <button
-                id="quick-banker-btn"
-                onClick={() => onSelectAccaCategory('BANKER')}
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-xs"
-                title="Safe Accumulator"
-              >
-                <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Safe Acca</span>
-              </button>
-
-              <button
-                id="quick-valhunter-btn"
-                onClick={() => onSelectAccaCategory('VALUE_HUNTER')}
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-xs"
-                title="Value Accumulator"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Top Value Acca</span>
-              </button>
-            </>
-          )}
-
-          {/* 3-line Menu Icon to open Settings & Preferences */}
+          {/* Menu Icon to open Settings & Preferences */}
           <button
             id="open-settings-modal-btn"
             onClick={onOpenSettings}

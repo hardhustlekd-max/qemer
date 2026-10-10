@@ -1,14 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { X, TrendingUp, BarChart2, Zap, History, Activity } from 'lucide-react';
-import { Fixture } from '../core/types.js';
+import React, { useState, useMemo, useEffect } from 'react';
+import { X, History, Calendar, Clock } from 'lucide-react';
+import { Fixture, HeadToHeadMeasurement } from '../core/types.js';
 import { PoissonMatrixView } from './PoissonMatrixView.js';
 import { PoissonEngine } from '../core/poisson.js';
 import { parseDynamicStatistics, StatCategoryGroup } from '../core/statisticsParser.js';
+import { EngineService } from '../services/engineService.js';
 
 interface MatchDetailModalProps {
   fixture: Fixture | null;
   onClose: () => void;
 }
+
+type ModalTab = 'OVERVIEW' | 'H2H' | 'STATS' | 'TEAMS';
 
 export const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
   fixture,
@@ -22,18 +25,51 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
   fixture,
   onClose,
 }) => {
+  const [activeTab, setActiveTab] = useState<ModalTab>('OVERVIEW');
   const [statFilterGroup, setStatFilterGroup] = useState<StatCategoryGroup>('ALL');
 
   const pred = fixture.prediction!;
   const homeStats = fixture.homeStats;
   const awayStats = fixture.awayStats;
 
-  // Retrieve computed measurements or derive fallback from scraped match records
-  const measurements = pred.measurements || {
-    h2h: PoissonEngine.computeHeadToHead(fixture.homeTeam, fixture.awayTeam, []),
-  };
+  // Real Scraped Head to Head synchronization
+  const initialH2H = pred.measurements?.h2h && pred.measurements.h2h.matchesCount > 0
+    ? pred.measurements.h2h
+    : null;
+  const [scrapedH2H, setScrapedH2H] = useState<HeadToHeadMeasurement | null>(initialH2H);
+  const [isLoadingH2H, setIsLoadingH2H] = useState<boolean>(!initialH2H);
 
-  const { h2h } = measurements;
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadRealH2H() {
+      if (initialH2H && initialH2H.matchesCount > 0) {
+        setIsLoadingH2H(false);
+        return;
+      }
+
+      try {
+        setIsLoadingH2H(true);
+        const data = await EngineService.getMatchHeadToHead(fixture.id, fixture.homeTeam, fixture.awayTeam);
+        if (!isCancelled && data && data.matchesCount > 0) {
+          setScrapedH2H(data);
+        }
+      } catch (err) {
+        console.warn('Unable to load live H2H:', err);
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingH2H(false);
+        }
+      }
+    }
+
+    loadRealH2H();
+    return () => {
+      isCancelled = true;
+    };
+  }, [fixture.id, fixture.homeTeam, fixture.awayTeam]);
+
+  const fallbackH2H = pred.measurements?.h2h || PoissonEngine.computeHeadToHead(fixture.homeTeam, fixture.awayTeam, []);
+  const h2h = scrapedH2H || fallbackH2H;
 
   // Dynamically parse real statistics from Flashscore scraper
   const rawStatistics = useMemo(() => {
@@ -49,212 +85,536 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
     return parsedStatsSummary.items.filter((item) => item.group === statFilterGroup);
   }, [parsedStatsSummary, statFilterGroup]);
 
+  // Probabilities converted to percentages
+  const homeWinPct = Math.round(pred.homeWinProb * 1000) / 10;
+  const drawPct = Math.round(pred.drawProb * 1000) / 10;
+  const awayWinPct = Math.round(pred.awayWinProb * 1000) / 10;
+
+  const topScores = pred.topCorrectScores?.slice(0, 5) || [];
+
+  // Best recommended prediction label
+  const topPredictionLabel = pred.homeWinProb >= pred.awayWinProb && pred.homeWinProb >= pred.drawProb
+    ? `${fixture.homeTeam} Win`
+    : pred.awayWinProb >= pred.homeWinProb && pred.awayWinProb >= pred.drawProb
+    ? `${fixture.awayTeam} Win`
+    : 'Draw';
+
+  const topPredictionProb = Math.max(pred.homeWinProb, pred.drawProb, pred.awayWinProb);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl shadow-slate-900/10 dark:shadow-black/60 font-sans">
-        {/* Header */}
-        <div className="sticky top-0 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between z-10 shadow-xs">
-          <div className="min-w-0 pr-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                {fixture.leagueName} ({fixture.league})
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-150 font-sans">
+      <div className="bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 rounded-3xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl shadow-slate-900/10 dark:shadow-black/70 border border-slate-100 dark:border-slate-800/80">
+        
+        {/* Modal Top Bar */}
+        <div className="bg-white dark:bg-[#0B0F17] px-4 sm:px-6 pt-4 pb-3 border-b border-slate-100 dark:border-slate-800/60 shrink-0">
+          <div className="flex items-center justify-between gap-3 min-w-0">
+            {/* Competition & Timing Metadata */}
+            <div className="flex items-center gap-2 min-w-0 flex-nowrap overflow-x-auto no-scrollbar text-xs text-slate-500 dark:text-slate-400">
+              <span className="font-semibold text-slate-800 dark:text-slate-200 truncate whitespace-nowrap">
+                {fixture.stage || fixture.leagueName}
               </span>
-              <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
-                Kick-off: {fixture.matchDate} @ {fixture.kickOffTime}
+              <span aria-hidden="true" className="text-slate-300 dark:text-slate-600 shrink-0">·</span>
+              <span className="flex items-center gap-1 font-mono text-[11px] whitespace-nowrap shrink-0">
+                <Calendar className="w-3 h-3 text-slate-400" />
+                <span>{fixture.matchDate}</span>
               </span>
-            </div>
-            <h2 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white mt-1 truncate">
-              {fixture.homeTeam} <span className="text-slate-400 dark:text-slate-500 font-normal">vs</span> {fixture.awayTeam}
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0 cursor-pointer shadow-xs"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Key Metrics Overview */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-            {/* 1X2 Probabilities */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1 flex items-center justify-between">
-                <span>1X2 Win Probabilities</span>
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div className="flex items-baseline justify-between font-mono mt-2">
-                <div className="text-center">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[70px]">{fixture.homeTeam.slice(0, 3).toUpperCase()}</div>
-                  <div className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400">{(pred.homeWinProb * 100).toFixed(1)}%</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400">DRAW</div>
-                  <div className="text-sm sm:text-base font-bold text-amber-600 dark:text-amber-400">{(pred.drawProb * 100).toFixed(1)}%</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[70px]">{fixture.awayTeam.slice(0, 3).toUpperCase()}</div>
-                  <div className="text-sm sm:text-base font-bold text-cyan-600 dark:text-cyan-400">{(pred.awayWinProb * 100).toFixed(1)}%</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Expected Goals λ */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1 flex items-center justify-between">
-                <span>Expected Goals (xG)</span>
-                <BarChart2 className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-              </div>
-              <div className="flex items-center justify-around font-mono mt-2">
-                <div className="text-center">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Home: </span>
-                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">{pred.homeXG}</span>
-                </div>
-                <div className="text-slate-400 dark:text-slate-600 font-bold">:</div>
-                <div className="text-center">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Away: </span>
-                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">{pred.awayXG}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Total Goals & BTTS */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1 flex items-center justify-between">
-                <span>Goal Line &amp; BTTS</span>
-                <Zap className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-              </div>
-              <div className="flex items-center justify-between font-mono text-xs mt-2">
-                <div>
-                  <span className="text-slate-500 dark:text-slate-400 text-[11px]">Over 2.5: </span>
-                  <span className="font-bold text-slate-900 dark:text-slate-200">{(pred.over25Prob * 100).toFixed(1)}%</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 dark:text-slate-400 text-[11px]">BTTS: </span>
-                  <span className="font-bold text-slate-900 dark:text-slate-200">{(pred.bttsProb * 100).toFixed(1)}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Head to Head Record from Scraped Matches */}
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Head to Head Record</span>
-              </h4>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                {h2h.matchesCount} Previous Encounters
+              <span aria-hidden="true" className="text-slate-300 dark:text-slate-600 shrink-0">·</span>
+              <span className="flex items-center gap-1 font-mono text-[11px] whitespace-nowrap shrink-0">
+                <Clock className="w-3 h-3 text-slate-400" />
+                <span>{fixture.kickOffTime}</span>
               </span>
-            </div>
-
-            <div className="bg-white dark:bg-slate-950 p-3 sm:p-4 rounded-xl shadow-xs text-xs space-y-2.5">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                <span className="font-bold text-slate-800 dark:text-slate-200">
-                  Direct H2H Match History
-                </span>
-                <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                  Home: x{h2h.h2hMultiplierHome} • Away: x{h2h.h2hMultiplierAway}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center font-mono py-1">
-                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{fixture.homeTeam} Wins</div>
-                  <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{h2h.homeWins}</div>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400">Draws</div>
-                  <div className="text-sm font-bold text-amber-600 dark:text-amber-400">{h2h.draws}</div>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{fixture.awayTeam} Wins</div>
-                  <div className="text-sm font-bold text-cyan-600 dark:text-cyan-400">{h2h.awayWins}</div>
-                </div>
-              </div>
-
-              {h2h.recentH2H.length > 0 && (
-                <div className="pt-1 space-y-1">
-                  <div className="text-[10px] text-slate-400 font-medium">Recent Encounters:</div>
-                  {h2h.recentH2H.map((r, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-slate-300">
-                      <span className="text-slate-400">{r.date}</span>
-                      <span className="font-semibold">{r.homeTeam} vs {r.awayTeam}</span>
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">{r.score}</span>
-                    </div>
-                  ))}
-                </div>
+              {fixture.status === 'LIVE' && (
+                <>
+                  <span aria-hidden="true" className="text-slate-300 dark:text-slate-600 shrink-0">·</span>
+                  <span className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1 text-[11px] whitespace-nowrap shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                    Live In Play
+                  </span>
+                </>
               )}
             </div>
+
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer shrink-0 shadow-2xs"
+              aria-label="Close match details"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Match Information from Scraper if present */}
-          {(fixture.stage || (fixture.information && fixture.information.length > 0) || fixture.resultDetails) && (
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs space-y-2">
-              <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-300 uppercase tracking-wider">
-                Match Details
-              </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono">
-                {fixture.stage && (
-                  <div className="p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Stage</span>
-                    <span className="font-bold text-slate-900 dark:text-white truncate block">{fixture.stage}</span>
+          {/* Hero Scoreboard Banner */}
+          <div className="mt-3 p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/40 min-w-0">
+            <div className="grid grid-cols-12 items-center gap-2 sm:gap-4">
+              
+              {/* Home Team */}
+              <div className="col-span-5 flex items-center gap-2.5 min-w-0 flex-nowrap">
+                {fixture.homeBadge ? (
+                  <img
+                    src={fixture.homeBadge}
+                    alt=""
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain shrink-0 rounded-full"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 font-black text-sm flex items-center justify-center shrink-0">
+                    {fixture.homeTeam.slice(0, 1)}
                   </div>
                 )}
-                {fixture.resultDetails?.regulationTime && (
-                  <div className="p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Regulation</span>
-                    <span className="font-bold text-slate-900 dark:text-white">{fixture.resultDetails.regulationTime}</span>
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate whitespace-nowrap block" title={fixture.homeTeam}>
+                    {fixture.homeTeam}
+                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-nowrap">
+                    <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold whitespace-nowrap shrink-0">
+                      {homeWinPct}% Win
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono hidden sm:inline whitespace-nowrap shrink-0">
+                      xG {pred.homeXG}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Center Match Status or Score */}
+              <div className="col-span-2 flex flex-col items-center justify-center text-center shrink-0">
+                {fixture.score && fixture.score.home !== undefined ? (
+                  <div>
+                    <span className="text-xl sm:text-2xl font-mono font-black text-slate-900 dark:text-white tracking-tight whitespace-nowrap">
+                      {fixture.score.home} : {fixture.score.away}
+                    </span>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mt-0.5 whitespace-nowrap">
+                      {fixture.status === 'LIVE' ? (fixture.minute ? `${fixture.minute}'` : 'Live') : 'Full Time'}
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-lg bg-white dark:bg-[#070A0F] text-slate-400 dark:text-slate-500 shadow-2xs whitespace-nowrap">
+                      VS
+                    </span>
+                    <span className="block text-[10px] font-mono text-slate-400 mt-1 whitespace-nowrap">
+                      {fixture.kickOffTime}
+                    </span>
                   </div>
                 )}
-                {fixture.resultDetails?.penalties && (
-                  <div className="p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Penalties</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{fixture.resultDetails.penalties}</span>
+              </div>
+
+              {/* Away Team */}
+              <div className="col-span-5 flex items-center justify-end gap-2.5 min-w-0 text-right flex-nowrap">
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate whitespace-nowrap block" title={fixture.awayTeam}>
+                    {fixture.awayTeam}
+                  </span>
+                  <div className="flex items-center justify-end gap-1.5 mt-0.5 flex-nowrap">
+                    <span className="text-[10px] text-slate-400 font-mono hidden sm:inline whitespace-nowrap shrink-0">
+                      xG {pred.awayXG}
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-md bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 font-mono text-[10px] font-bold whitespace-nowrap shrink-0">
+                      {awayWinPct}% Win
+                    </span>
+                  </div>
+                </div>
+                {fixture.awayBadge ? (
+                  <img
+                    src={fixture.awayBadge}
+                    alt=""
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain shrink-0 rounded-full"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 font-black text-sm flex items-center justify-center shrink-0">
+                    {fixture.awayTeam.slice(0, 1)}
                   </div>
                 )}
-                {fixture.information?.map((info, idx) => (
-                  <div key={idx} className="p-2 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{info.category}</span>
-                    <span className="font-bold text-slate-900 dark:text-white truncate block">{info.value}</span>
+              </div>
+
+            </div>
+
+            {/* Quick Glancing Projection Strip */}
+            <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between gap-2 text-[11px] font-mono flex-nowrap overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-3 flex-nowrap shrink-0">
+                <span className="text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">
+                  Draw: <strong className="text-amber-600 dark:text-amber-400">{drawPct}%</strong>
+                </span>
+                <span className="text-slate-300 dark:text-slate-700 shrink-0">·</span>
+                <span className="text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">
+                  Over 2.5: <strong className="text-slate-800 dark:text-slate-200">{(pred.over25Prob * 100).toFixed(0)}%</strong>
+                </span>
+                <span className="text-slate-300 dark:text-slate-700 shrink-0">·</span>
+                <span className="text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">
+                  BTTS: <strong className="text-slate-800 dark:text-slate-200">{(pred.bttsProb * 100).toFixed(0)}%</strong>
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 font-sans whitespace-nowrap shrink-0">
+                <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Top Pick:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                  {topPredictionLabel} ({Math.round(topPredictionProb * 100)}%)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Segmented Sub-Navigation Bar */}
+          <div className="mt-3 w-full flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-2xl overflow-x-auto no-scrollbar flex-nowrap shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('OVERVIEW')}
+              className={`flex-1 min-w-[68px] sm:min-w-0 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink flex items-center justify-center ${
+                activeTab === 'OVERVIEW'
+                  ? 'bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <span>Overview</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('H2H')}
+              className={`flex-1 min-w-[56px] sm:min-w-0 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink flex items-center justify-center gap-1.5 ${
+                activeTab === 'H2H'
+                  ? 'bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <span>H2H</span>
+              {h2h.matchesCount > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 font-mono font-bold">
+                  {h2h.matchesCount}
+                </span>
+              )}
+            </button>
+
+            {parsedStatsSummary.items.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('STATS')}
+                className={`flex-1 min-w-[76px] sm:min-w-0 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink flex items-center justify-center gap-1.5 ${
+                  activeTab === 'STATS'
+                    ? 'bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>Statistics</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 font-mono font-bold">
+                  {parsedStatsSummary.items.length}
+                </span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('TEAMS')}
+              className={`flex-1 min-w-[76px] sm:min-w-0 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 sm:shrink flex items-center justify-center ${
+                activeTab === 'TEAMS'
+                  ? 'bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <span>Team Form</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable Content Body */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1">
+          
+          {/* TAB 1: OVERVIEW */}
+          {activeTab === 'OVERVIEW' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              
+              {/* Win Probability Proportional Gauge & Cards */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                    Outcome Probabilities
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                    Poisson Model
+                  </span>
+                </div>
+
+                {/* 3-Section Proportional Bar */}
+                <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full flex overflow-hidden">
+                  <div style={{ width: `${homeWinPct}%` }} className="bg-emerald-500 transition-all duration-300" />
+                  <div style={{ width: `${drawPct}%` }} className="bg-amber-500 transition-all duration-300" />
+                  <div style={{ width: `${awayWinPct}%` }} className="bg-cyan-500 transition-all duration-300" />
+                </div>
+
+                {/* 3 Metric Cards */}
+                <div className="grid grid-cols-3 gap-2 pt-1 font-mono">
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#070A0F] text-center shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate font-sans">
+                      {fixture.homeTeam} Win
+                    </span>
+                    <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                      {homeWinPct}%
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                      Odds {fixture.odds.homeWin.toFixed(2)}
+                    </span>
                   </div>
-                ))}
+
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#070A0F] text-center shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">
+                      Draw
+                    </span>
+                    <span className="text-sm sm:text-base font-extrabold text-amber-600 dark:text-amber-400 block mt-0.5">
+                      {drawPct}%
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                      Odds {fixture.odds.draw.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#070A0F] text-center shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate font-sans">
+                      {fixture.awayTeam} Win
+                    </span>
+                    <span className="text-sm sm:text-base font-extrabold text-cyan-600 dark:text-cyan-400 block mt-0.5">
+                      {awayWinPct}%
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                      Odds {fixture.odds.awayWin.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Goal Line & Expected Goals Metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 font-mono">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">
+                    Expected Goals
+                  </span>
+                  <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                    <span className="text-emerald-600 dark:text-emerald-400">{pred.homeXG}</span>
+                    <span className="text-slate-400 px-1 font-normal">vs</span>
+                    <span className="text-cyan-600 dark:text-cyan-400">{pred.awayXG}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 font-mono">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">
+                    Over 2.5 Goals
+                  </span>
+                  <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                    {(pred.over25Prob * 100).toFixed(1)}%
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 font-mono">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">
+                    Both Teams Score
+                  </span>
+                  <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                    {(pred.bttsProb * 100).toFixed(1)}%
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 font-mono">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">
+                    Over 1.5 Goals
+                  </span>
+                  <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                    {(pred.over15Prob * 100).toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+
+              {/* Most Probable Correct Scores */}
+              {topScores.length > 0 && (
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      Most Probable Scorelines
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      Top Exact Scores
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-5 gap-2 font-mono text-center">
+                    {topScores.map((scoreItem, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs"
+                      >
+                        <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block">
+                          {scoreItem.score}
+                        </span>
+                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                          {(scoreItem.probability * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Poisson Heatmap Matrix */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60">
+                <PoissonMatrixView
+                  prediction={pred}
+                  homeTeam={fixture.homeTeam}
+                  awayTeam={fixture.awayTeam}
+                  showTopScores={false}
+                />
               </div>
             </div>
           )}
 
-          {/* Match Dynamic Statistics Parsed from Scraper */}
-          {parsedStatsSummary.items.length > 0 && (
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-3.5 h-3.5 text-cyan-500" />
-                  <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Match Statistics
-                  </h4>
+          {/* TAB 2: HEAD TO HEAD */}
+          {activeTab === 'H2H' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              
+              {/* Summary Metrics */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-emerald-500" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      Head to Head Record
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white font-mono">
+                    {h2h.matchesCount} Previous Encounters
+                  </span>
                 </div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                  Dynamic Parser ({parsedStatsSummary.items.length})
-                </span>
+
+                {/* 3 Outcome Summary Cards */}
+                <div className="grid grid-cols-3 gap-2 text-center font-mono">
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate font-sans">
+                      {fixture.homeTeam} Wins
+                    </span>
+                    <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                      {h2h.homeWins}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">
+                      Draws
+                    </span>
+                    <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 block mt-0.5">
+                      {h2h.draws}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate font-sans">
+                      {fixture.awayTeam} Wins
+                    </span>
+                    <span className="text-base sm:text-lg font-black text-cyan-600 dark:text-cyan-400 block mt-0.5">
+                      {h2h.awayWins}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Key Insights (Averages & Multipliers) */}
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
+                    <span className="text-slate-500 dark:text-slate-400 text-[11px] font-sans">
+                      Goals Per Match
+                    </span>
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      {h2h.homeGoalsAvg} vs {h2h.awayGoalsAvg}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
+                    <span className="text-slate-500 dark:text-slate-400 text-[11px] font-sans">
+                      H2H Factor
+                    </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      x{h2h.h2hMultiplierHome} vs x{h2h.h2hMultiplierAway}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* High-level possession comparison bar if possession is parsed */}
+              {/* Historical Match Encounters List */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-2.5">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 block">
+                  Past Encounters
+                </span>
+
+                {isLoadingH2H ? (
+                  <div className="py-8 text-center text-xs text-slate-500 font-mono flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Loading records...</span>
+                  </div>
+                ) : h2h.recentH2H && h2h.recentH2H.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {h2h.recentH2H.map((enc, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between text-xs font-mono"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <span className="text-[10px] text-slate-400 shrink-0 font-sans">
+                            {enc.date}
+                          </span>
+                          {enc.competition && (
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[120px] hidden sm:inline">
+                              {enc.competition}
+                            </span>
+                          )}
+                          <span className="font-semibold text-slate-900 dark:text-white truncate">
+                            {enc.homeTeam} vs {enc.awayTeam}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`px-2 py-0.5 rounded-lg text-xs font-black ${
+                              enc.winner === 'HOME'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+                                : enc.winner === 'AWAY'
+                                ? 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400'
+                                : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
+                            }`}
+                          >
+                            {enc.score}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-xs text-slate-400 font-mono">
+                    No previous encounters recorded
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: STATISTICS */}
+          {activeTab === 'STATS' && parsedStatsSummary.items.length > 0 && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              
+              {/* Possession Comparative Gauge */}
               {parsedStatsSummary.possession && (
-                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs space-y-1.5 font-mono text-xs">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-2 font-mono text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
                       {parsedStatsSummary.possession.home}%
                     </span>
-                    <span className="font-sans text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                    <span className="font-sans text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                       Ball Possession
                     </span>
-                    <span className="font-bold text-cyan-600 dark:text-cyan-400">
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400 text-sm">
                       {parsedStatsSummary.possession.away}%
                     </span>
                   </div>
-                  <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full flex overflow-hidden">
+                  <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full flex overflow-hidden">
                     <div
                       style={{ width: `${parsedStatsSummary.possession.home}%` }}
                       className="bg-emerald-500 transition-all duration-300"
@@ -267,18 +627,18 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
                 </div>
               )}
 
-              {/* Dynamic Group Filter Tabs */}
+              {/* Dynamic Group Filter */}
               {parsedStatsSummary.availableGroups.length > 1 && (
-                <div className="flex items-center bg-white dark:bg-slate-950 p-1 rounded-xl shadow-xs overflow-x-auto no-scrollbar gap-1">
+                <div className="w-full flex items-center bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl overflow-x-auto no-scrollbar gap-1 flex-nowrap shrink-0">
                   {parsedStatsSummary.availableGroups.map((g) => (
                     <button
                       key={g.group}
                       type="button"
                       onClick={() => setStatFilterGroup(g.group)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center justify-center gap-1 shrink-0 ${
                         statFilterGroup === g.group
-                          ? 'bg-slate-100 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-2xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          ? 'bg-white dark:bg-[#0B0F17] text-slate-900 dark:text-white shadow-xs'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                       }`}
                     >
                       <span>{g.label}</span>
@@ -289,15 +649,15 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
               )}
 
               {/* Parsed Metric Items */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {filteredStatItems.map((stat, idx) => (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs space-y-1.5"
+                    className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-1.5"
                   >
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span
-                        className={`font-bold w-16 text-left ${
+                        className={`font-bold w-14 text-left ${
                           stat.leader === 'HOME'
                             ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
                             : 'text-slate-700 dark:text-slate-300'
@@ -305,11 +665,11 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
                       >
                         {stat.home.raw}
                       </span>
-                      <span className="text-slate-700 dark:text-slate-300 font-sans font-semibold text-center flex-1 truncate px-2">
+                      <span className="text-slate-700 dark:text-slate-300 font-sans font-semibold text-center flex-1 truncate px-2 text-xs">
                         {stat.category}
                       </span>
                       <span
-                        className={`font-bold w-16 text-right ${
+                        className={`font-bold w-14 text-right ${
                           stat.leader === 'AWAY'
                             ? 'text-cyan-600 dark:text-cyan-400 font-extrabold'
                             : 'text-slate-700 dark:text-slate-300'
@@ -324,156 +684,162 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
                       <div
                         style={{ width: `${stat.homeSharePercent}%` }}
                         className={`transition-all duration-300 ${
-                          stat.isInverseMetric
-                            ? 'bg-rose-500'
-                            : 'bg-emerald-500'
+                          stat.isInverseMetric ? 'bg-rose-500' : 'bg-emerald-500'
                         }`}
                       />
                       <div
                         style={{ width: `${stat.awaySharePercent}%` }}
                         className={`transition-all duration-300 ${
-                          stat.isInverseMetric
-                            ? 'bg-amber-500'
-                            : 'bg-cyan-500'
+                          stat.isInverseMetric ? 'bg-amber-500' : 'bg-cyan-500'
                         }`}
                       />
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Match Venue & Details if provided */}
+              {(fixture.stage || (fixture.information && fixture.information.length > 0)) && (
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200 block">
+                    Venue Details
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono">
+                    {fixture.information?.map((info, idx) => (
+                      <div key={idx} className="p-2 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                        <span className="text-[10px] text-slate-400 block font-sans">{info.category}</span>
+                        <span className="font-bold text-slate-900 dark:text-white truncate block">{info.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Poisson 5x5 Heatmap Matrix */}
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 shadow-xs">
-            <PoissonMatrixView
-              prediction={pred}
-              homeTeam={fixture.homeTeam}
-              awayTeam={fixture.awayTeam}
-            />
-          </div>
-
-          {/* Predicted Outcome Probabilities */}
-          <div>
-            <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-300 uppercase tracking-wider mb-2.5">
-              Predicted Outcome Probabilities
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
-              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                <span className="font-semibold text-xs text-slate-900 dark:text-white">{fixture.homeTeam} Win</span>
-                <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
-                  {(pred.homeWinProb * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                <span className="font-semibold text-xs text-slate-900 dark:text-white">Draw</span>
-                <span className="font-mono font-bold text-xs text-amber-600 dark:text-amber-400 bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
-                  {(pred.drawProb * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                <span className="font-semibold text-xs text-slate-900 dark:text-white">{fixture.awayTeam} Win</span>
-                <span className="font-mono font-bold text-xs text-cyan-600 dark:text-cyan-400 bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
-                  {(pred.awayWinProb * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                <span className="font-semibold text-xs text-slate-900 dark:text-white">Over 2.5 Goals</span>
-                <span className="font-mono font-bold text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
-                  {(pred.over25Prob * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                <span className="font-semibold text-xs text-slate-900 dark:text-white">Both Teams to Score (BTTS)</span>
-                <span className="font-mono font-bold text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
-                  {(pred.bttsProb * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="p-2.5 sm:p-3 rounded-2xl flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shadow-xs">
-                <span className="font-semibold text-xs text-slate-900 dark:text-white">Over 1.5 Goals</span>
-                <span className="font-mono font-bold text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs">
-                  {(pred.over15Prob * 100).toFixed(1)}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Team Attack & Defense Strengths */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            {/* Home Team Stats */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white">{fixture.homeTeam} (Home)</h4>
-                <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">Form Mult: x{pred.homeFormMultiplier}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
-                  <div className="text-slate-500 dark:text-slate-400 text-[10px]">Attack Strength</div>
-                  <div className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">{pred.homeAttackStrength}</div>
+          {/* TAB 4: TEAMS & FORM */}
+          {activeTab === 'TEAMS' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in duration-150">
+              
+              {/* Home Team Analysis */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                    {fixture.homeTeam}
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                    Form Factor x{pred.homeFormMultiplier}
+                  </span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
-                  <div className="text-slate-500 dark:text-slate-400 text-[10px]">Defense Strength</div>
-                  <div className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">{pred.homeDefenseStrength}</div>
-                </div>
-              </div>
-              {homeStats && homeStats.recentMatches && (
-                <div className="pt-1">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Recent Matches:</div>
-                  <div className="space-y-1">
-                    {homeStats.recentMatches.slice(0, 3).map((m, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-300">
-                        <span className="truncate pr-1">vs {m.opponent}</span>
-                        <span className={`font-mono font-bold px-1.5 py-0.2 rounded-md text-[10px] shrink-0 shadow-2xs ${
-                          m.result === 'W' ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400' :
-                          m.result === 'D' ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400' :
-                          'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-400'
-                        }`}>
-                          {m.result} ({m.goalsFor}-{m.goalsAgainst})
-                        </span>
-                      </div>
-                    ))}
+
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-slate-400 text-[10px] block font-sans">Attack Rating</span>
+                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                      {pred.homeAttackStrength}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-slate-400 text-[10px] block font-sans">Defense Rating</span>
+                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                      {pred.homeDefenseStrength}
+                    </span>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Away Team Stats */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 shadow-xs space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white">{fixture.awayTeam} (Away)</h4>
-                <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400">Form Mult: x{pred.awayFormMultiplier}</span>
+                {homeStats?.recentMatches && homeStats.recentMatches.length > 0 && (
+                  <div className="pt-1 space-y-1.5">
+                    <span className="text-[10px] text-slate-400 font-sans block">
+                      Recent Matches
+                    </span>
+                    <div className="space-y-1">
+                      {homeStats.recentMatches.slice(0, 4).map((m, idx) => (
+                        <div
+                          key={idx}
+                          className="p-2 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between text-xs font-mono"
+                        >
+                          <span className="truncate pr-2 text-slate-700 dark:text-slate-300">
+                            vs {m.opponent}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold shrink-0 ${
+                              m.result === 'W'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
+                                : m.result === 'D'
+                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
+                                : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
+                            }`}
+                          >
+                            {m.result} {m.goalsFor}-{m.goalsAgainst}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
-                  <div className="text-slate-500 dark:text-slate-400 text-[10px]">Attack Strength</div>
-                  <div className="text-xs sm:text-sm font-bold text-cyan-600 dark:text-cyan-400">{pred.awayAttackStrength}</div>
+
+              {/* Away Team Analysis */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                    {fixture.awayTeam}
+                  </span>
+                  <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400 font-bold">
+                    Form Factor x{pred.awayFormMultiplier}
+                  </span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950/60 shadow-xs">
-                  <div className="text-slate-500 dark:text-slate-400 text-[10px]">Defense Strength</div>
-                  <div className="text-xs sm:text-sm font-bold text-cyan-600 dark:text-cyan-400">{pred.awayDefenseStrength}</div>
-                </div>
-              </div>
-              {awayStats && awayStats.recentMatches && (
-                <div className="pt-1">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Recent Matches:</div>
-                  <div className="space-y-1">
-                    {awayStats.recentMatches.slice(0, 3).map((m, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-300">
-                        <span className="truncate pr-1">vs {m.opponent}</span>
-                        <span className={`font-mono font-bold px-1.5 py-0.2 rounded-md text-[10px] shrink-0 shadow-2xs ${
-                          m.result === 'W' ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400' :
-                          m.result === 'D' ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400' :
-                          'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-400'
-                        }`}>
-                          {m.result} ({m.goalsFor}-{m.goalsAgainst})
-                        </span>
-                      </div>
-                    ))}
+
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-slate-400 text-[10px] block font-sans">Attack Rating</span>
+                    <span className="text-sm font-bold text-cyan-600 dark:text-cyan-400 block mt-0.5">
+                      {pred.awayAttackStrength}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-slate-400 text-[10px] block font-sans">Defense Rating</span>
+                    <span className="text-sm font-bold text-cyan-600 dark:text-cyan-400 block mt-0.5">
+                      {pred.awayDefenseStrength}
+                    </span>
                   </div>
                 </div>
-              )}
+
+                {awayStats?.recentMatches && awayStats.recentMatches.length > 0 && (
+                  <div className="pt-1 space-y-1.5">
+                    <span className="text-[10px] text-slate-400 font-sans block">
+                      Recent Matches
+                    </span>
+                    <div className="space-y-1">
+                      {awayStats.recentMatches.slice(0, 4).map((m, idx) => (
+                        <div
+                          key={idx}
+                          className="p-2 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between text-xs font-mono"
+                        >
+                          <span className="truncate pr-2 text-slate-700 dark:text-slate-300">
+                            vs {m.opponent}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold shrink-0 ${
+                              m.result === 'W'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
+                                : m.result === 'D'
+                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
+                                : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
+                            }`}
+                          >
+                            {m.result} {m.goalsFor}-{m.goalsAgainst}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
-          </div>
+          )}
+
         </div>
       </div>
     </div>

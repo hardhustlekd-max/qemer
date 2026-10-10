@@ -255,12 +255,12 @@ export const FixturesList: React.FC<FixturesListProps> = ({
     <div className="space-y-2.5 font-sans">
       {/* Scope Sub-Tabs: Upcoming, Live, History placed above match list */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl shadow-xs shrink-0 overflow-x-auto no-scrollbar">
+        <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl shadow-xs shrink-0 overflow-x-auto no-scrollbar flex-nowrap">
           <button
             id="subtab-upcoming-btn"
             type="button"
             onClick={() => setActiveScope('UPCOMING')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
               activeScope === 'UPCOMING'
                 ? 'bg-white dark:bg-emerald-600 text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -273,21 +273,21 @@ export const FixturesList: React.FC<FixturesListProps> = ({
             id="subtab-live-btn"
             type="button"
             onClick={() => setActiveScope('LIVE')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-1.5 ${
               activeScope === 'LIVE'
                 ? 'bg-white dark:bg-emerald-600 text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-            Live
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+            <span className="whitespace-nowrap">Live</span>
           </button>
 
           <button
             id="subtab-history-btn"
             type="button"
             onClick={() => setActiveScope('HISTORY')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
               activeScope === 'HISTORY'
                 ? 'bg-white dark:bg-emerald-600 text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -364,9 +364,9 @@ export const FixturesList: React.FC<FixturesListProps> = ({
 
             return groups.map((group) => (
               <div key={group.headerKey} className="space-y-2.5">
-                <div className="flex items-center gap-2 px-1">
+                <div className="flex items-center gap-2 px-1 min-w-0">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-xs font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  <span className="text-xs font-extrabold tracking-tight text-slate-900 dark:text-white truncate whitespace-nowrap">
                     {group.subDivision || group.leagueName}
                   </span>
                 </div>

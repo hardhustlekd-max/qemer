@@ -12,7 +12,6 @@ import {
 } from './core/types.js';
 import { LiveScore } from './providers/types.js';
 import { EngineService } from './services/engineService.js';
-import { Sparkles } from 'lucide-react';
 
 export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -164,9 +163,8 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 dark:bg-[#070A0F] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 dark:bg-emerald-600 text-white font-bold text-xs px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700 animate-in slide-in-from-bottom-2">
-          <Sparkles className="w-4 h-4 text-emerald-400 dark:text-white shrink-0" />
-          <span className="truncate max-w-[260px]">{notification.message}</span>
+        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white font-medium text-xs px-4 py-2.5 rounded-xl shadow-lg border border-slate-800 animate-in slide-in-from-bottom-2">
+          <span className="truncate max-w-[280px]">{notification.message}</span>
         </div>
       )}
 

@@ -99,7 +99,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
         {/* Category Pills */}
-        <div className="bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl flex items-center gap-1 overflow-x-auto no-scrollbar shadow-xs shrink-0">
+        <div className="bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl flex items-center gap-1 overflow-x-auto no-scrollbar shadow-xs shrink-0 flex-nowrap">
           {[
             { id: 'ALL' as const, label: 'All' },
             { id: 'BETTING_TIP' as const, label: 'Tips' },
@@ -110,7 +110,7 @@ export const TipsSection: React.FC<TipsSectionProps> = ({
             <button
               key={tab.id}
               onClick={() => setSelectedCategory(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                 selectedCategory === tab.id
                   ? 'bg-white dark:bg-emerald-600 text-slate-900 dark:text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'

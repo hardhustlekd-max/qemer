@@ -107,9 +107,9 @@ export const LeagueSelectorModal: React.FC<LeagueSelectorModalProps> = ({
                   <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-mono text-[10px] font-bold text-slate-500 uppercase shrink-0 shadow-2xs">
                     {league.code.slice(0, 3)}
                   </div>
-                  <div className="truncate">
-                    <div className="text-xs sm:text-sm font-bold truncate">{league.name}</div>
-                    <div className="text-[10px] text-slate-400">{league.country || 'Global International'}</div>
+                  <div className="truncate min-w-0 flex-1">
+                    <div className="text-xs sm:text-sm font-bold truncate whitespace-nowrap">{league.name}</div>
+                    <div className="text-[10px] text-slate-400 truncate whitespace-nowrap">{league.country || 'Global International'}</div>
                   </div>
                 </div>
                 {isSelected && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 ml-2" />}

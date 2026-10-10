@@ -214,20 +214,20 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
       {activeSlip && (
         <div className="space-y-2.5">
           {/* Key Metrics Chips */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar flex-nowrap">
+            <div className="flex items-center gap-1.5 text-xs flex-nowrap shrink-0 overflow-x-auto no-scrollbar">
+              <span className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap shrink-0">
                 {activeSlip.combinedOdds.toFixed(2)}x
               </span>
-              <span className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-slate-900 dark:text-white">
+              <span className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap shrink-0">
                 {(activeSlip.combinedProb * 100).toFixed(0)}% Win
               </span>
               {risk && (
-                <span className={`px-2.5 py-1 rounded-xl shadow-xs font-bold text-xs ${risk.badgeBg} ${risk.textColor}`}>
+                <span className={`px-2.5 py-1 rounded-xl shadow-xs font-bold text-xs ${risk.badgeBg} ${risk.textColor} whitespace-nowrap shrink-0`}>
                   {risk.label}
                 </span>
               )}
-              <span className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+              <span className="bg-slate-50 dark:bg-slate-950 px-2.5 py-1 rounded-xl shadow-xs font-mono font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap shrink-0">
                 Payout £{potentialPayout}
               </span>
             </div>
@@ -236,17 +236,17 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
             <button
               type="button"
               onClick={() => handleCopySlip(activeSlip, activeSlip.id)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white"
+              className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white whitespace-nowrap"
             >
               {copiedId === activeSlip.id ? (
                 <>
                   <Check className="w-3.5 h-3.5" />
-                  <span>Copied</span>
+                  <span className="whitespace-nowrap">Copied</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5" />
-                  <span>Copy Slip</span>
+                  <span className="whitespace-nowrap">Copy Slip</span>
                 </>
               )}
             </button>
@@ -260,28 +260,28 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
               return (
                 <div
                   key={`${leg.fixtureId}-${leg.marketKey}`}
-                  className="py-2 hover:bg-slate-50/60 dark:hover:bg-slate-900/40 transition-colors flex items-center justify-between gap-2 text-xs"
+                  className="py-2 hover:bg-slate-50/60 dark:hover:bg-slate-900/40 transition-colors flex items-center justify-between gap-2 text-xs flex-nowrap"
                 >
                   {/* Leg Index & Teams */}
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className="w-5 h-5 rounded-lg bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-mono text-[11px] font-bold flex items-center justify-center shrink-0 shadow-xs">
                       {index + 1}
                     </span>
 
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] text-slate-400 font-medium">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-nowrap min-w-0">
+                        <span className="text-[10px] text-slate-400 font-medium truncate whitespace-nowrap">
                           {leg.league}
                         </span>
                         {leg.fixtureDate && (
-                          <span className="text-[10px] font-mono text-slate-400">
+                          <span className="text-[10px] font-mono text-slate-400 shrink-0 whitespace-nowrap">
                             {leg.fixtureDate === getRelativeDateStr(0) ? 'Today' : leg.fixtureDate === getRelativeDateStr(1) ? 'Tomorrow' : leg.fixtureDate}
                           </span>
                         )}
                       </div>
                       <div
                         onClick={() => matchedFixture && onSelectDetail && onSelectDetail(matchedFixture)}
-                        className={`font-bold text-xs text-slate-900 dark:text-white truncate ${matchedFixture ? 'cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400' : ''}`}
+                        className={`font-bold text-xs text-slate-900 dark:text-white truncate whitespace-nowrap ${matchedFixture ? 'cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400' : ''}`}
                       >
                         {leg.homeTeam} vs {leg.awayTeam}
                       </div>
@@ -289,11 +289,11 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
                   </div>
 
                   {/* Selection & Odds */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-950 shadow-xs">
+                  <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-950 shadow-xs whitespace-nowrap">
                       {leg.selection}
                     </span>
-                    <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-950 shadow-xs">
+                    <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-950 shadow-xs whitespace-nowrap">
                       @{leg.odds.toFixed(2)}
                     </span>
                   </div>
