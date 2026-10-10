@@ -57,7 +57,9 @@ async function handlePrebuiltGeneration(req: any, res: any) {
           f.homeTeam,
           f.awayTeam,
           historicalContext,
-          settings
+          settings,
+          null,
+          allMatches
         );
 
         const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(
@@ -204,7 +206,9 @@ accumulatorRouter.post('/generate', async (req, res) => {
         f.homeTeam,
         f.awayTeam,
         historicalContext,
-        settings
+        settings,
+        null,
+        allMatches
       );
 
       const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(

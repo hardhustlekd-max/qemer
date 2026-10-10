@@ -721,50 +721,97 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
 
           {/* TAB 4: TEAMS & FORM */}
           {activeTab === 'TEAMS' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in duration-150">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-150">
               
               {/* Home Team Analysis */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-                    {fixture.homeTeam}
-                  </span>
-                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                    Form Factor x{pred.homeFormMultiplier}
+                  <div>
+                    <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white block">
+                      {fixture.homeTeam}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                      Home Form & Statistics
+                    </span>
+                  </div>
+                  <span className="text-xs px-2.5 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 font-mono font-bold">
+                    x{pred.homeFormMultiplier} Form
                   </span>
                 </div>
 
-                <div className="space-y-1.5 text-xs font-mono">
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
-                    <span className="text-slate-500 dark:text-slate-400 text-[11px] font-sans">Attack Rating</span>
-                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                {/* Recent Form Sequence Badges */}
+                {homeStats?.recentForm && homeStats.recentForm.length > 0 && (
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">Form Guide</span>
+                    <div className="flex items-center gap-1 font-mono">
+                      {homeStats.recentForm.slice(0, 10).map((r, i) => (
+                        <span
+                          key={i}
+                          className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center ${
+                            r === 'W'
+                              ? 'bg-emerald-500 text-white'
+                              : r === 'D'
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-rose-500 text-white'
+                          }`}
+                        >
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ratings & Averages */}
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">Attack Rating</span>
+                    <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 block mt-0.5">
                       {pred.homeAttackStrength}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
-                    <span className="text-slate-500 dark:text-slate-400 text-[11px] font-sans">Defense Rating</span>
-                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">Defense Rating</span>
+                    <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 block mt-0.5">
                       {pred.homeDefenseStrength}
                     </span>
                   </div>
                 </div>
 
+                {homeStats && (
+                  <div className="space-y-1.5 font-mono text-xs">
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
+                      <span className="text-slate-500 dark:text-slate-400 font-sans">Goals Scored / Conceded</span>
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {homeStats.goalsScored} / {homeStats.goalsConceded}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
+                      <span className="text-slate-500 dark:text-slate-400 font-sans">Goals Averages</span>
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {homeStats.avgGoalsScored} - {homeStats.avgGoalsConceded} per match
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {homeStats?.recentMatches && homeStats.recentMatches.length > 0 && (
-                  <div className="pt-1 space-y-1.5">
-                    <span className="text-[10px] text-slate-400 font-sans block">
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block font-sans">
                       Recent Matches
                     </span>
-                    <div className="space-y-1">
-                      {homeStats.recentMatches.slice(0, 4).map((m, idx) => (
+                    <div className="space-y-1.5 font-mono">
+                      {homeStats.recentMatches.slice(0, 10).map((m, idx) => (
                         <div
                           key={idx}
-                          className="p-2 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between text-xs font-mono"
+                          className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between text-xs"
                         >
-                          <span className="truncate pr-2 text-slate-700 dark:text-slate-300">
-                            vs {m.opponent}
-                          </span>
+                          <div className="flex items-center gap-2 truncate pr-2">
+                            <span className="text-[10px] text-slate-400 font-sans">{m.date}</span>
+                            <span className="truncate text-slate-700 dark:text-slate-300">vs {m.opponent}</span>
+                          </div>
                           <span
-                            className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold shrink-0 ${
+                            className={`px-2 py-0.5 rounded-lg text-xs font-bold shrink-0 ${
                               m.result === 'W'
                                 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
                                 : m.result === 'D'
@@ -782,47 +829,94 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
               </div>
 
               {/* Away Team Analysis */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-                    {fixture.awayTeam}
-                  </span>
-                  <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400 font-bold">
-                    Form Factor x{pred.awayFormMultiplier}
+                  <div>
+                    <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white block">
+                      {fixture.awayTeam}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                      Away Form & Statistics
+                    </span>
+                  </div>
+                  <span className="text-xs px-2.5 py-1 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 font-mono font-bold">
+                    x{pred.awayFormMultiplier} Form
                   </span>
                 </div>
 
-                <div className="space-y-1.5 text-xs font-mono">
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
-                    <span className="text-slate-500 dark:text-slate-400 text-[11px] font-sans">Attack Rating</span>
-                    <span className="text-sm font-bold text-cyan-600 dark:text-cyan-400">
+                {/* Recent Form Sequence Badges */}
+                {awayStats?.recentForm && awayStats.recentForm.length > 0 && (
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">Form Guide</span>
+                    <div className="flex items-center gap-1 font-mono">
+                      {awayStats.recentForm.slice(0, 10).map((r, i) => (
+                        <span
+                          key={i}
+                          className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center ${
+                            r === 'W'
+                              ? 'bg-emerald-500 text-white'
+                              : r === 'D'
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-rose-500 text-white'
+                          }`}
+                        >
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ratings & Averages */}
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">Attack Rating</span>
+                    <span className="text-base font-extrabold text-cyan-600 dark:text-cyan-400 block mt-0.5">
                       {pred.awayAttackStrength}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
-                    <span className="text-slate-500 dark:text-slate-400 text-[11px] font-sans">Defense Rating</span>
-                    <span className="text-sm font-bold text-cyan-600 dark:text-cyan-400">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-sans">Defense Rating</span>
+                    <span className="text-base font-extrabold text-cyan-600 dark:text-cyan-400 block mt-0.5">
                       {pred.awayDefenseStrength}
                     </span>
                   </div>
                 </div>
 
+                {awayStats && (
+                  <div className="space-y-1.5 font-mono text-xs">
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
+                      <span className="text-slate-500 dark:text-slate-400 font-sans">Goals Scored / Conceded</span>
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {awayStats.goalsScored} / {awayStats.goalsConceded}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between">
+                      <span className="text-slate-500 dark:text-slate-400 font-sans">Goals Averages</span>
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {awayStats.avgGoalsScored} - {awayStats.avgGoalsConceded} per match
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {awayStats?.recentMatches && awayStats.recentMatches.length > 0 && (
-                  <div className="pt-1 space-y-1.5">
-                    <span className="text-[10px] text-slate-400 font-sans block">
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block font-sans">
                       Recent Matches
                     </span>
-                    <div className="space-y-1">
-                      {awayStats.recentMatches.slice(0, 4).map((m, idx) => (
+                    <div className="space-y-1.5 font-mono">
+                      {awayStats.recentMatches.slice(0, 10).map((m, idx) => (
                         <div
                           key={idx}
-                          className="p-2 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between text-xs font-mono"
+                          className="p-2.5 rounded-xl bg-white dark:bg-[#070A0F] shadow-xs flex items-center justify-between text-xs"
                         >
-                          <span className="truncate pr-2 text-slate-700 dark:text-slate-300">
-                            vs {m.opponent}
-                          </span>
+                          <div className="flex items-center gap-2 truncate pr-2">
+                            <span className="text-[10px] text-slate-400 font-sans">{m.date}</span>
+                            <span className="truncate text-slate-700 dark:text-slate-300">vs {m.opponent}</span>
+                          </div>
                           <span
-                            className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold shrink-0 ${
+                            className={`px-2 py-0.5 rounded-lg text-xs font-bold shrink-0 ${
                               m.result === 'W'
                                 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
                                 : m.result === 'D'

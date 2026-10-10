@@ -81,7 +81,9 @@ fixturesRouter.get('/', async (req, res) => {
         f.homeTeam,
         f.awayTeam,
         historicalContext,
-        settings
+        settings,
+        null,
+        allMatches
       );
 
       const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(
@@ -171,9 +173,46 @@ fixturesRouter.get('/history', async (req, res) => {
   try {
     const league = req.query.league as string | undefined;
     const limit = parseInt((req.query.limit as string) || '300', 10);
-    const matches = league && league !== 'ALL'
+    const rawMatches = league && league !== 'ALL'
       ? db.getLeagueHistoricalMatches(league, limit)
       : db.getAllHistoricalMatches(limit);
+
+    const scrapedMatches = db.getFlashscoreScrapedMatches(500);
+    const scrapedAsHistorical: any[] = scrapedMatches
+      .filter((sm) => sm.result?.home !== undefined && sm.result?.away !== undefined)
+      .map((sm, idx) => ({
+        id: sm.matchId || `scraped_${idx}`,
+        div: sm.leagueName || sm.stage || 'FLASHSCORE',
+        matchDate: sm.date ? sm.date.slice(0, 10) : '2024-01-01',
+        homeTeam: sm.home.name,
+        awayTeam: sm.away.name,
+        fthg: parseInt(sm.result!.home!, 10) || 0,
+        ftag: parseInt(sm.result!.away!, 10) || 0,
+        ftr: (parseInt(sm.result!.home!, 10) || 0) > (parseInt(sm.result!.away!, 10) || 0) ? 'H' : (parseInt(sm.result!.home!, 10) || 0) < (parseInt(sm.result!.away!, 10) || 0) ? 'A' : 'D',
+      }));
+
+    let allMatches = [...rawMatches, ...scrapedAsHistorical];
+
+    if (league && league !== 'ALL') {
+      const upperLeague = league.toUpperCase();
+      const leagueMapping: Record<string, string> = {
+        'PREMIER LEAGUE': 'E0',
+        'LA LIGA': 'SP1',
+        'BUNDESLIGA': 'D1',
+        'SERIE A': 'I1',
+        'LIGUE 1': 'F1',
+        'EFL CHAMPIONSHIP': 'E1',
+      };
+      const mappedCode = leagueMapping[league.toUpperCase()] || upperLeague;
+
+      allMatches = allMatches.filter((m) => {
+        const divUpper = (m.div || '').toUpperCase();
+        return divUpper === upperLeague || divUpper === mappedCode || divUpper.includes(upperLeague);
+      });
+    }
+
+    allMatches.sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
+    const matches = allMatches.slice(0, limit);
 
     res.json({
       success: true,
@@ -249,7 +288,8 @@ fixturesRouter.get('/:id', async (req, res) => {
       f.awayTeam,
       historicalContext,
       settings,
-      realH2H
+      realH2H,
+      allMatches
     );
 
     const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(

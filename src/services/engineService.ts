@@ -114,7 +114,9 @@ export class EngineService {
           f.homeTeam,
           f.awayTeam,
           historicalContext,
-          localSettings
+          localSettings,
+          null,
+          localHistoricalMatches
         );
 
         const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(

@@ -45,11 +45,13 @@ export class PoissonEngine {
     windowLimit = 15,
     formDecayRate = 0.85
   ): TeamStatsSummary {
-    const teamMatches = allMatches.filter(
-      (m) => m.homeTeam.toLowerCase() === teamName.toLowerCase() || m.awayTeam.toLowerCase() === teamName.toLowerCase()
-    );
+    const teamMatches = allMatches
+      .filter(
+        (m) => m.homeTeam.toLowerCase() === teamName.toLowerCase() || m.awayTeam.toLowerCase() === teamName.toLowerCase()
+      )
+      .sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
 
-    const recentMatches = teamMatches.slice(0, windowLimit);
+    const recentMatches = teamMatches.slice(0, Math.max(10, windowLimit));
 
     let homeMatchesCount = 0;
     let awayMatchesCount = 0;
@@ -293,17 +295,19 @@ export class PoissonEngine {
     awayTeam: string,
     leagueHistoricalMatches: HistoricalMatch[],
     settings: EngineSettings,
-    realScrapedH2H?: HeadToHeadMeasurement | null
+    realScrapedH2H?: HeadToHeadMeasurement | null,
+    allHistoricalMatches?: HistoricalMatch[]
   ): { prediction: PoissonPrediction; homeStats: TeamStatsSummary; awayStats: TeamStatsSummary } {
+    const statsSource = allHistoricalMatches && allHistoricalMatches.length > 0 ? allHistoricalMatches : leagueHistoricalMatches;
     const homeStats = this.computeTeamStats(
       homeTeam,
-      leagueHistoricalMatches,
+      statsSource,
       settings.rollingMatchWindow,
       settings.formDecayRate
     );
     const awayStats = this.computeTeamStats(
       awayTeam,
-      leagueHistoricalMatches,
+      statsSource,
       settings.rollingMatchWindow,
       settings.formDecayRate
     );

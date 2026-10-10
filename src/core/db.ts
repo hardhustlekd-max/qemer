@@ -525,20 +525,30 @@ export class FootballDB {
   }
 
   getLeagueHistoricalMatches(leagueCode: string, limit = 400): HistoricalMatch[] {
+    const leagueMapping: Record<string, string> = {
+      'PREMIER LEAGUE': 'E0',
+      'LA LIGA': 'SP1',
+      'BUNDESLIGA': 'D1',
+      'SERIE A': 'I1',
+      'LIGUE 1': 'F1',
+      'EFL CHAMPIONSHIP': 'E1',
+    };
+    const code = leagueMapping[leagueCode.toUpperCase()] || leagueCode;
+
     if (!this.db) {
       return this.fallbackHistoricalMatches
-        .filter((m) => m.div.toUpperCase() === leagueCode.toUpperCase())
+        .filter((m) => m.div.toUpperCase() === code.toUpperCase() || m.div.toUpperCase() === leagueCode.toUpperCase())
         .slice(0, limit);
     }
 
     try {
       const stmt = this.db.prepare(`
         SELECT * FROM historical_matches
-        WHERE div = ?
+        WHERE div = ? OR div = ?
         ORDER BY match_date DESC
         LIMIT ?
       `);
-      stmt.bind([leagueCode, limit]);
+      stmt.bind([code, leagueCode, limit]);
 
       const matches: HistoricalMatch[] = [];
       while (stmt.step()) {
@@ -549,7 +559,7 @@ export class FootballDB {
       return matches;
     } catch {
       return this.fallbackHistoricalMatches
-        .filter((m) => m.div.toUpperCase() === leagueCode.toUpperCase())
+        .filter((m) => m.div.toUpperCase() === code.toUpperCase() || m.div.toUpperCase() === leagueCode.toUpperCase())
         .slice(0, limit);
     }
   }
