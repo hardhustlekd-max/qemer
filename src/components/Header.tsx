@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, RefreshCw } from 'lucide-react';
 import { EngineSettings, ProviderStatus } from '../core/types.js';
 
 interface HeaderProps {
@@ -11,6 +11,8 @@ interface HeaderProps {
   onSelectAccaCategory?: (cat: 'BANKER' | 'VALUE_HUNTER') => void;
   onProviderChange: (providerId: EngineSettings['activeProvider']) => void;
   isSyncing: boolean;
+  onSyncData?: () => void;
+  isSyncingData?: boolean;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
 }
@@ -24,6 +26,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectAccaCategory,
   onProviderChange,
   isSyncing,
+  onSyncData,
+  isSyncingData,
   theme,
   onToggleTheme,
 }) => {
@@ -49,6 +53,19 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 shrink-0">
+          {onSyncData && (
+            <button
+              id="sync-data-btn"
+              onClick={onSyncData}
+              disabled={isSyncingData}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              title="Sync Live Data from Flashscore"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingData ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sync Data</span>
+            </button>
+          )}
+
           {/* Menu Icon to open Settings & Preferences */}
           <button
             id="open-settings-modal-btn"

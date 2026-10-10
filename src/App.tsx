@@ -42,11 +42,30 @@ export default function App() {
   const [selectedDetailFixture, setSelectedDetailFixture] = useState<Fixture | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSeeding, setIsSeeding] = useState<boolean>(false);
+  const [isSyncingData, setIsSyncingData] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   const showNotification = (message: string, type: 'success' | 'info' = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3500);
+  };
+
+  const handleSyncData = async () => {
+    try {
+      setIsSyncingData(true);
+      showNotification('Synchronizing real Flashscore live data...');
+      const res = await EngineService.syncFlashscoreData();
+      if (res.success) {
+        await Promise.all([fetchFixtures(), fetchSettingsAndProviders()]);
+        showNotification(res.message || 'Flashscore data synchronized successfully!');
+      } else {
+        showNotification(res.message || 'Failed to sync data');
+      }
+    } catch (err: any) {
+      showNotification('Error syncing data: ' + (err?.message || err));
+    } finally {
+      setIsSyncingData(false);
+    }
   };
 
   const toggleTheme = () => {
@@ -178,6 +197,8 @@ export default function App() {
         onSelectAccaCategory={() => setActiveTab('ACCAS')}
         onProviderChange={handleProviderChange}
         isSyncing={isLoadingFixtures}
+        onSyncData={handleSyncData}
+        isSyncingData={isSyncingData}
         theme={theme}
         onToggleTheme={toggleTheme}
       />

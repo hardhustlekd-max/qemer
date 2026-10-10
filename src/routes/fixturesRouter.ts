@@ -45,11 +45,21 @@ fixturesRouter.get('/', async (req, res) => {
       return true;
     });
 
-    // Retrieve all historical matches once for optimal performance
-    const allMatches = db.getAllHistoricalMatches(1500);
-
-    // Look up scraped matches from SQLite cache
+    // Retrieve all historical matches and DB scraped matches for real team form
+    const rawHist = db.getAllHistoricalMatches(1500);
     const scrapedMatches = db.getFlashscoreScrapedMatches(500);
+    const scrapedAsHistorical: any[] = scrapedMatches
+      .filter((sm) => sm.result?.home !== undefined && sm.result?.away !== undefined)
+      .map((sm) => ({
+        div: sm.leagueName || sm.stage || 'FLASHSCORE',
+        matchDate: sm.date ? sm.date.slice(0, 10) : '2024-01-01',
+        homeTeam: sm.home.name,
+        awayTeam: sm.away.name,
+        fthg: parseInt(sm.result!.home!, 10) || 0,
+        ftag: parseInt(sm.result!.away!, 10) || 0,
+        ftr: (parseInt(sm.result!.home!, 10) || 0) > (parseInt(sm.result!.away!, 10) || 0) ? 'H' : (parseInt(sm.result!.home!, 10) || 0) < (parseInt(sm.result!.away!, 10) || 0) ? 'A' : 'D',
+      }));
+    const allMatches = [...rawHist, ...scrapedAsHistorical];
     const scrapedMap = new Map<string, any>();
     for (const sm of scrapedMatches) {
       if (sm.matchId) {
@@ -213,7 +223,20 @@ fixturesRouter.get('/:id', async (req, res) => {
       autoSyncDaily: true,
     };
 
-    const allMatches = db.getAllHistoricalMatches(1500);
+    const rawHist = db.getAllHistoricalMatches(1500);
+    const scrapedMatches = db.getFlashscoreScrapedMatches(500);
+    const scrapedAsHistorical: any[] = scrapedMatches
+      .filter((sm) => sm.result?.home !== undefined && sm.result?.away !== undefined)
+      .map((sm) => ({
+        div: sm.leagueName || sm.stage || 'FLASHSCORE',
+        matchDate: sm.date ? sm.date.slice(0, 10) : '2024-01-01',
+        homeTeam: sm.home.name,
+        awayTeam: sm.away.name,
+        fthg: parseInt(sm.result!.home!, 10) || 0,
+        ftag: parseInt(sm.result!.away!, 10) || 0,
+        ftr: (parseInt(sm.result!.home!, 10) || 0) > (parseInt(sm.result!.away!, 10) || 0) ? 'H' : (parseInt(sm.result!.home!, 10) || 0) < (parseInt(sm.result!.away!, 10) || 0) ? 'A' : 'D',
+      }));
+    const allMatches = [...rawHist, ...scrapedAsHistorical];
     const leagueMatches = allMatches.filter((m) => m.div.toUpperCase() === f.league.toUpperCase());
     const historicalContext = leagueMatches.length >= 10 ? leagueMatches : allMatches;
 
@@ -238,8 +261,8 @@ fixturesRouter.get('/:id', async (req, res) => {
     );
 
     // Look up scraped matches from SQLite cache
-    const scrapedMatches = db.getFlashscoreScrapedMatches(500);
-    const sm = scrapedMatches.find(
+    const scrapedMatchesDetail = db.getFlashscoreScrapedMatches(500);
+    const sm = scrapedMatchesDetail.find(
       (item) =>
         item.matchId === f.id ||
         `fs_${item.matchId}` === f.id ||

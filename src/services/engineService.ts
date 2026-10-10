@@ -210,6 +210,20 @@ export class EngineService {
   }
 
   /**
+   * Syncs real Flashscore data into database
+   */
+  public static async syncFlashscoreData(): Promise<{ success: boolean; message: string; matchesCount?: number; upcomingCount?: number }> {
+    const res = await this.safeJsonFetch('/api/providers/flashscore/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (res && res.success) {
+      return res;
+    }
+    return { success: false, message: res?.error || 'Failed to sync data' };
+  }
+
+  /**
    * Fetches provider status
    */
   public static async getProviders(): Promise<ProviderStatus[]> {

@@ -146,18 +146,24 @@ export class PoissonEngine {
   }
 
   /**
-   * Head-to-Head (H2H) Measurement
+   * H2H Model: Analyzes head-to-head history for the previous 2 match years (730 days)
    */
   public static computeHeadToHead(
     homeTeam: string,
     awayTeam: string,
     allMatches: HistoricalMatch[]
   ): HeadToHeadMeasurement {
-    const h2hMatches = allMatches.filter(
-      (m) =>
+    const twoYearsAgoTime = Date.now() - (730 * 24 * 60 * 60 * 1000);
+
+    const h2hMatches = allMatches.filter((m) => {
+      const isTeamMatch =
         (m.homeTeam.toLowerCase() === homeTeam.toLowerCase() && m.awayTeam.toLowerCase() === awayTeam.toLowerCase()) ||
-        (m.homeTeam.toLowerCase() === awayTeam.toLowerCase() && m.awayTeam.toLowerCase() === homeTeam.toLowerCase())
-    );
+        (m.homeTeam.toLowerCase() === awayTeam.toLowerCase() && m.awayTeam.toLowerCase() === homeTeam.toLowerCase());
+      if (!isTeamMatch) return false;
+      if (!m.matchDate) return true;
+      const mTime = new Date(m.matchDate).getTime();
+      return isNaN(mTime) || mTime >= twoYearsAgoTime;
+    });
 
     let homeWins = 0;
     let draws = 0;
@@ -173,16 +179,9 @@ export class PoissonEngine {
       homeGoalsTotal += hGoals;
       awayGoalsTotal += aGoals;
 
-      let winner: 'HOME' | 'AWAY' | 'DRAW' = 'DRAW';
-      if (hGoals > aGoals) {
-        homeWins++;
-        winner = 'HOME';
-      } else if (aGoals > hGoals) {
-        awayWins++;
-        winner = 'AWAY';
-      } else {
-        draws++;
-      }
+      if (hGoals > aGoals) homeWins++;
+      else if (aGoals > hGoals) awayWins++;
+      else draws++;
 
       if (recentH2H.length < 5) {
         recentH2H.push({
@@ -191,6 +190,7 @@ export class PoissonEngine {
           awayTeam: m.awayTeam,
           score: `${m.fthg}-${m.ftag}`,
           winner: m.fthg > m.ftag ? 'HOME' : m.ftag > m.fthg ? 'AWAY' : 'DRAW',
+          competition: m.div,
         });
       }
     }
@@ -224,8 +224,69 @@ export class PoissonEngine {
   }
 
   /**
-   * Generates a complete Poisson match probability prediction & expected goals
-   * integrating available measurements from scraped match records: Head-to-Head (H2H)
+   * Team Form Model: Analyzes recent form, goal difference, momentum over recent matches
+   */
+  public static computeTeamFormModel(
+    homeTeam: string,
+    awayTeam: string,
+    allMatches: HistoricalMatch[]
+  ): { homeWinProb: number; drawProb: number; awayWinProb: number; homeFormScore: number; awayFormScore: number } {
+    const homeTeamMatches = allMatches.filter(
+      (m) => m.homeTeam.toLowerCase() === homeTeam.toLowerCase() || m.awayTeam.toLowerCase() === homeTeam.toLowerCase()
+    ).slice(0, 10);
+
+    const awayTeamMatches = allMatches.filter(
+      (m) => m.homeTeam.toLowerCase() === awayTeam.toLowerCase() || m.awayTeam.toLowerCase() === awayTeam.toLowerCase()
+    ).slice(0, 10);
+
+    let homeFormPoints = 0;
+    let homeGoalDiff = 0;
+    for (const m of homeTeamMatches) {
+      const isHome = m.homeTeam.toLowerCase() === homeTeam.toLowerCase();
+      const gf = isHome ? m.fthg : m.ftag;
+      const ga = isHome ? m.ftag : m.fthg;
+      homeGoalDiff += (gf - ga);
+      if (gf > ga) homeFormPoints += 3;
+      else if (gf === ga) homeFormPoints += 1;
+    }
+
+    let awayFormPoints = 0;
+    let awayGoalDiff = 0;
+    for (const m of awayTeamMatches) {
+      const isHome = m.homeTeam.toLowerCase() === awayTeam.toLowerCase();
+      const gf = isHome ? m.fthg : m.ftag;
+      const ga = isHome ? m.ftag : m.fthg;
+      awayGoalDiff += (gf - ga);
+      if (gf > ga) awayFormPoints += 3;
+      else if (gf === ga) awayFormPoints += 1;
+    }
+
+    const homeMaxPts = Math.max(1, homeTeamMatches.length * 3);
+    const awayMaxPts = Math.max(1, awayTeamMatches.length * 3);
+    const homeFormRatio = homeFormPoints / homeMaxPts;
+    const awayFormRatio = awayFormPoints / awayMaxPts;
+
+    const formDiff = (homeFormRatio - awayFormRatio) + (homeGoalDiff - awayGoalDiff) * 0.04;
+    let formHomeWinProb = 0.38 + formDiff * 0.4;
+    let formAwayWinProb = 0.38 - formDiff * 0.4;
+    let formDrawProb = 0.24;
+
+    formHomeWinProb = Math.max(0.1, Math.min(0.75, formHomeWinProb));
+    formAwayWinProb = Math.max(0.1, Math.min(0.75, formAwayWinProb));
+    formDrawProb = Math.max(0.15, Math.min(0.4, formDrawProb));
+
+    const total = formHomeWinProb + formDrawProb + formAwayWinProb;
+    return {
+      homeWinProb: formHomeWinProb / total,
+      drawProb: formDrawProb / total,
+      awayWinProb: formAwayWinProb / total,
+      homeFormScore: Number((0.9 + homeFormRatio * 0.3).toFixed(2)),
+      awayFormScore: Number((0.9 + awayFormRatio * 0.3).toFixed(2)),
+    };
+  }
+
+  /**
+   * Generates a complete match probability prediction combining Poisson Model, H2H Model (previous 2 years), and Team Form Model
    */
   public static predictMatch(
     homeTeam: string,
@@ -258,7 +319,7 @@ export class PoissonEngine {
       leagueAwayAvg = totA / leagueHistoricalMatches.length;
     }
 
-    // Use direct scraped H2H if provided, or compute strictly from scraped match records
+    // Use direct scraped H2H if provided, or compute strictly from H2H model (previous 2 match years)
     const h2h = (realScrapedH2H && realScrapedH2H.matchesCount > 0)
       ? realScrapedH2H
       : this.computeHeadToHead(homeTeam, awayTeam, leagueHistoricalMatches);
@@ -273,7 +334,7 @@ export class PoissonEngine {
       awayStats.awayDefense *
       leagueHomeAvg *
       homeStats.formScore *
-      (settings.homeAdvantageFactor || 1.12) *
+      (settings.homeAdvantageFactor || 1.03) *
       h2h.h2hMultiplierHome;
 
     let awayXG =
@@ -290,9 +351,9 @@ export class PoissonEngine {
     // Calculate score probability matrix (up to 5 goals each)
     const MAX_GOALS = 5;
     const matrix: number[][] = [];
-    let homeWinProb = 0;
-    let drawProb = 0;
-    let awayWinProb = 0;
+    let poissonHomeWin = 0;
+    let poissonDraw = 0;
+    let poissonAwayWin = 0;
     let over15Prob = 0;
     let over25Prob = 0;
     let over35Prob = 0;
@@ -315,9 +376,9 @@ export class PoissonEngine {
           probability: Number(pScore.toFixed(4)),
         });
 
-        if (h > a) homeWinProb += pScore;
-        else if (h === a) drawProb += pScore;
-        else awayWinProb += pScore;
+        if (h > a) poissonHomeWin += pScore;
+        else if (h === a) poissonDraw += pScore;
+        else poissonAwayWin += pScore;
 
         const totalGoals = h + a;
         if (totalGoals > 1.5) over15Prob += pScore;
@@ -331,12 +392,41 @@ export class PoissonEngine {
     scoresList.sort((a, b) => b.probability - a.probability);
     const topCorrectScores = scoresList.slice(0, 5);
 
-    // Normalize probabilities so sum of 1X2 = 1.0
-    const total1X2 = homeWinProb + drawProb + awayWinProb;
-    if (total1X2 > 0) {
-      homeWinProb = homeWinProb / total1X2;
-      drawProb = drawProb / total1X2;
-      awayWinProb = awayWinProb / total1X2;
+    // Normalize Poisson 1X2 probabilities
+    const totalPoisson = poissonHomeWin + poissonDraw + poissonAwayWin;
+    if (totalPoisson > 0) {
+      poissonHomeWin /= totalPoisson;
+      poissonDraw /= totalPoisson;
+      poissonAwayWin /= totalPoisson;
+    }
+
+    // H2H Model probabilities (previous 2 match years)
+    let h2hHomeWin = 0.37;
+    let h2hDraw = 0.28;
+    let h2hAwayWin = 0.35;
+    if (h2h.matchesCount > 0) {
+      h2hHomeWin = (h2h.homeWins + 0.5 * h2h.draws) / h2h.matchesCount;
+      h2hAwayWin = (h2h.awayWins + 0.5 * h2h.draws) / h2h.matchesCount;
+      h2hDraw = Math.max(0.20, 1.0 - h2hHomeWin - h2hAwayWin);
+      const totH2H = h2hHomeWin + h2hDraw + h2hAwayWin;
+      h2hHomeWin /= totH2H;
+      h2hDraw /= totH2H;
+      h2hAwayWin /= totH2H;
+    }
+
+    // Team Form Model probabilities
+    const formModel = this.computeTeamFormModel(homeTeam, awayTeam, leagueHistoricalMatches);
+
+    // Final Combined Result: Ensemble weighting (25% Poisson Model + 50% Team Form Model + 25% H2H Model for previous 2 match years)
+    let homeWinProb = (0.25 * poissonHomeWin) + (0.50 * formModel.homeWinProb) + (0.25 * h2hHomeWin);
+    let drawProb = (0.25 * poissonDraw) + (0.50 * formModel.drawProb) + (0.25 * h2hDraw);
+    let awayWinProb = (0.25 * poissonAwayWin) + (0.50 * formModel.awayWinProb) + (0.25 * h2hAwayWin);
+
+    const totalCombined = homeWinProb + drawProb + awayWinProb;
+    if (totalCombined > 0) {
+      homeWinProb = homeWinProb / totalCombined;
+      drawProb = drawProb / totalCombined;
+      awayWinProb = awayWinProb / totalCombined;
     }
 
     const prediction: PoissonPrediction = {
@@ -354,8 +444,8 @@ export class PoissonEngine {
       homeDefenseStrength: homeStats.homeDefense,
       awayAttackStrength: awayStats.awayAttack,
       awayDefenseStrength: awayStats.awayDefense,
-      homeFormMultiplier: homeStats.formScore,
-      awayFormMultiplier: awayStats.formScore,
+      homeFormMultiplier: formModel.homeFormScore,
+      awayFormMultiplier: formModel.awayFormScore,
       probabilityMatrix: matrix,
       measurements,
     };

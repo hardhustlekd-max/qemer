@@ -77,6 +77,21 @@ providersRouter.get('/flashscore/scrape', async (req, res) => {
   }
 });
 
+providersRouter.post('/flashscore/sync', async (req, res) => {
+  try {
+    const syncRes = await flashscoreScraperService.syncHistoricalData(7);
+    const upcoming = await flashscoreScraperService.getUpcomingFixtures();
+    res.json({
+      success: true,
+      message: syncRes.message,
+      matchesCount: syncRes.matchesCount,
+      upcomingCount: upcoming.length,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed to sync Flashscore data' });
+  }
+});
+
 providersRouter.get('/flashscore/matches', (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
