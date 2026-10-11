@@ -225,6 +225,44 @@ fixturesRouter.get('/history', async (req, res) => {
   }
 });
 
+fixturesRouter.get('/club/:clubName/recent', async (req, res) => {
+  try {
+    const clubName = req.params.clubName;
+    const matchId = (req.query.matchId || req.query.fixtureId) as string | undefined;
+    const matches = await flashscoreScraperService.getClubRecentMatches(clubName, matchId);
+    res.json({
+      success: true,
+      club: clubName,
+      matchesCount: matches.length,
+      matches,
+    });
+  } catch (err: any) {
+    console.error(`Error fetching recent matches for club ${req.params.clubName}:`, err);
+    res.status(500).json({ success: false, error: err?.message || 'Failed to fetch club recent matches' });
+  }
+});
+
+fixturesRouter.get('/:id/recent-matches', async (req, res) => {
+  try {
+    const fixtureId = req.params.id;
+    const homeTeam = req.query.home as string | undefined;
+    const awayTeam = req.query.away as string | undefined;
+    const cleanId = fixtureId.replace(/^fs_/, '');
+    const h2h = await flashscoreScraperService.getMatchHeadToHead(cleanId, homeTeam, awayTeam);
+    res.json({
+      success: true,
+      fixtureId,
+      homeClub: h2h.homeClub || homeTeam,
+      awayClub: h2h.awayClub || awayTeam,
+      homeRecentMatches: h2h.homeRecentMatches || [],
+      awayRecentMatches: h2h.awayRecentMatches || [],
+    });
+  } catch (err: any) {
+    console.error('Error fetching fixture recent matches:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Failed to fetch fixture recent matches' });
+  }
+});
+
 fixturesRouter.get('/:id/h2h', async (req, res) => {
   try {
     const fixtureId = req.params.id;

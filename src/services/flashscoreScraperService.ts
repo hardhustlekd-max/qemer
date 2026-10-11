@@ -1,4 +1,4 @@
-import { Fixture, BookmakerOdds, HistoricalMatch, LeagueCode, FlashscoreScrapedMatch, HeadToHeadMeasurement, HeadToHeadMatchRecord } from '../core/types.js';
+import { Fixture, BookmakerOdds, HistoricalMatch, LeagueCode, FlashscoreScrapedMatch, HeadToHeadMeasurement, HeadToHeadMatchRecord, TeamFormMatch } from '../core/types.js';
 import { LiveOddsUpdate, LiveScore } from '../providers/types.js';
 import { db } from '../core/db.js';
 import { GLOBAL_LEAGUES_DATASET } from '../core/globalLeaguesDataset.js';
@@ -601,7 +601,7 @@ export class FlashscoreScraperService {
   }
 
   /**
-   * Scrapes real Head-to-Head (H2H) match history directly from Flashscore detailed feed (df_hh_1_{id})
+   * Scrapes real Head-to-Head (H2H) match history and recent matches directly from Flashscore detailed feed (df_hh_1_{id})
    */
   async getMatchHeadToHead(matchId: string, fixtureHomeTeam?: string, fixtureAwayTeam?: string): Promise<HeadToHeadMeasurement> {
     const cleanId = matchId.replace(/^fs_/, '').trim();
@@ -613,23 +613,47 @@ export class FlashscoreScraperService {
       const feedText = await this.fetchFlashscoreFeed(`df_hh_1_${cleanId}`);
       if (feedText) {
         const sections = feedText.split('~');
-        let inH2H = false;
+        let currentSection: 'NONE' | 'HOME_RECENT' | 'AWAY_RECENT' | 'H2H' = 'NONE';
+        let foundHomeHeader = false;
+        let foundAwayHeader = false;
+        let homeClubName = fixtureHomeTeam || '';
+        let awayClubName = fixtureAwayTeam || '';
+
         let homeWins = 0;
         let draws = 0;
         let awayWins = 0;
         let homeGoalsTotal = 0;
         let awayGoalsTotal = 0;
         const recentH2H: HeadToHeadMatchRecord[] = [];
+        const homeRecentMatches: TeamFormMatch[] = [];
+        const awayRecentMatches: TeamFormMatch[] = [];
 
         for (const s of sections) {
-          if (s.includes('KB÷Head-to-head matches')) {
-            inH2H = true;
-            continue;
-          }
-          if (inH2H && (s.startsWith('KA÷') || s.startsWith('KB÷'))) {
+          // If we hit subtabs like "KA÷Home - Home", stop before duplicate/filtered sets
+          if (s.startsWith('KA÷') && !s.startsWith('KA÷Overall') && (foundHomeHeader || foundAwayHeader)) {
             break;
           }
-          if (inH2H && s.includes('KC÷')) {
+
+          if (s.startsWith('KB÷Last matches: ')) {
+            const rawHeaderClub = s.replace('KB÷Last matches: ', '').replace('¬', '').trim();
+            if (!foundHomeHeader) {
+              currentSection = 'HOME_RECENT';
+              foundHomeHeader = true;
+              if (!homeClubName) homeClubName = rawHeaderClub;
+            } else if (!foundAwayHeader) {
+              currentSection = 'AWAY_RECENT';
+              foundAwayHeader = true;
+              if (!awayClubName) awayClubName = rawHeaderClub;
+            }
+            continue;
+          }
+
+          if (s.includes('KB÷Head-to-head matches')) {
+            currentSection = 'H2H';
+            continue;
+          }
+
+          if (s.includes('KC÷')) {
             const parts = s.split('¬');
             const d: Record<string, string> = {};
             for (const p of parts) {
@@ -643,51 +667,91 @@ export class FlashscoreScraperService {
             const aG = parseInt(d['KT'] || '0', 10);
             const timestamp = parseInt(d['KC'] || '0', 10);
             const dateStr = timestamp > 0 ? new Date((timestamp + 3 * 3600) * 1000).toISOString().split('T')[0] : '';
+            const competition = d['KF'] || 'League';
 
-            // Match alignment: check if rawHome aligns with fixtureHomeTeam
-            let isHomeFixture = true;
-            if (fixtureHomeTeam) {
-              const fHomeLower = fixtureHomeTeam.toLowerCase();
-              const rHomeLower = rawHome.toLowerCase();
-              const rAwayLower = rawAway.toLowerCase();
-              if (rHomeLower === fHomeLower || fHomeLower.includes(rHomeLower)) {
-                isHomeFixture = true;
-              } else if (rAwayLower === fHomeLower || fHomeLower.includes(rAwayLower)) {
-                isHomeFixture = false;
+            if (currentSection === 'HOME_RECENT') {
+              const target = homeClubName.toLowerCase();
+              const isH = rawHome.toLowerCase().includes(target) || target.includes(rawHome.toLowerCase());
+              const gf = isH ? hG : aG;
+              const ga = isH ? aG : hG;
+              const opp = isH ? rawAway : rawHome;
+              const res: 'W' | 'D' | 'L' = gf > ga ? 'W' : gf < ga ? 'L' : 'D';
+
+              if (homeRecentMatches.length < 20) {
+                homeRecentMatches.push({
+                  date: dateStr,
+                  opponent: opp || 'Opponent',
+                  isHome: isH,
+                  goalsFor: gf,
+                  goalsAgainst: ga,
+                  result: res,
+                  competition,
+                });
               }
-            }
+            } else if (currentSection === 'AWAY_RECENT') {
+              const target = awayClubName.toLowerCase();
+              const isH = rawHome.toLowerCase().includes(target) || target.includes(rawHome.toLowerCase());
+              const gf = isH ? hG : aG;
+              const ga = isH ? aG : hG;
+              const opp = isH ? rawAway : rawHome;
+              const res: 'W' | 'D' | 'L' = gf > ga ? 'W' : gf < ga ? 'L' : 'D';
 
-            const goalsForHome = isHomeFixture ? hG : aG;
-            const goalsForAway = isHomeFixture ? aG : hG;
+              if (awayRecentMatches.length < 20) {
+                awayRecentMatches.push({
+                  date: dateStr,
+                  opponent: opp || 'Opponent',
+                  isHome: isH,
+                  goalsFor: gf,
+                  goalsAgainst: ga,
+                  result: res,
+                  competition,
+                });
+              }
+            } else if (currentSection === 'H2H') {
+              let isHomeFixture = true;
+              if (fixtureHomeTeam) {
+                const fHomeLower = fixtureHomeTeam.toLowerCase();
+                const rHomeLower = rawHome.toLowerCase();
+                const rAwayLower = rawAway.toLowerCase();
+                if (rHomeLower === fHomeLower || fHomeLower.includes(rHomeLower)) {
+                  isHomeFixture = true;
+                } else if (rAwayLower === fHomeLower || fHomeLower.includes(rAwayLower)) {
+                  isHomeFixture = false;
+                }
+              }
 
-            homeGoalsTotal += goalsForHome;
-            awayGoalsTotal += goalsForAway;
+              const goalsForHome = isHomeFixture ? hG : aG;
+              const goalsForAway = isHomeFixture ? aG : hG;
 
-            if (goalsForHome > goalsForAway) {
-              homeWins++;
-            } else if (goalsForAway > goalsForHome) {
-              awayWins++;
-            } else {
-              draws++;
-            }
+              homeGoalsTotal += goalsForHome;
+              awayGoalsTotal += goalsForAway;
 
-            if (recentH2H.length < 10) {
-              recentH2H.push({
-                date: dateStr,
-                homeTeam: rawHome,
-                awayTeam: rawAway,
-                score: `${hG}-${aG}`,
-                winner: hG > aG ? 'HOME' : aG > hG ? 'AWAY' : 'DRAW',
-                competition: d['KF'] || 'League',
-              });
+              if (goalsForHome > goalsForAway) {
+                homeWins++;
+              } else if (goalsForAway > goalsForHome) {
+                awayWins++;
+              } else {
+                draws++;
+              }
+
+              if (recentH2H.length < 15) {
+                recentH2H.push({
+                  date: dateStr,
+                  homeTeam: rawHome,
+                  awayTeam: rawAway,
+                  score: `${hG}-${aG}`,
+                  winner: hG > aG ? 'HOME' : aG > hG ? 'AWAY' : 'DRAW',
+                  competition,
+                });
+              }
             }
           }
         }
 
         const matchesCount = homeWins + draws + awayWins;
-        if (matchesCount > 0) {
-          const homeGoalsAvg = Number((homeGoalsTotal / matchesCount).toFixed(2));
-          const awayGoalsAvg = Number((awayGoalsTotal / matchesCount).toFixed(2));
+        if (matchesCount > 0 || homeRecentMatches.length > 0 || awayRecentMatches.length > 0) {
+          const homeGoalsAvg = matchesCount > 0 ? Number((homeGoalsTotal / matchesCount).toFixed(2)) : 0;
+          const awayGoalsAvg = matchesCount > 0 ? Number((awayGoalsTotal / matchesCount).toFixed(2)) : 0;
           const netWinDiff = homeWins - awayWins;
           const netGoalDiff = homeGoalsTotal - awayGoalsTotal;
           const swing = matchesCount > 0 ? (netWinDiff * 0.02 + (netGoalDiff / matchesCount) * 0.015) : 0;
@@ -704,6 +768,10 @@ export class FlashscoreScraperService {
             h2hMultiplierHome,
             h2hMultiplierAway,
             recentH2H,
+            homeClub: homeClubName,
+            awayClub: awayClubName,
+            homeRecentMatches,
+            awayRecentMatches,
           };
 
           this.cacheH2H.set(cleanId, measurement);
@@ -724,7 +792,43 @@ export class FlashscoreScraperService {
             (m.homeTeam.toLowerCase() === fixtureAwayTeam.toLowerCase() && m.awayTeam.toLowerCase() === fixtureHomeTeam.toLowerCase())
         );
 
-        if (matched.length > 0) {
+        const homeRecentMatches: TeamFormMatch[] = histMatches
+          .filter((m) => m.homeTeam.toLowerCase() === fixtureHomeTeam.toLowerCase() || m.awayTeam.toLowerCase() === fixtureHomeTeam.toLowerCase())
+          .slice(0, 10)
+          .map((m) => {
+            const isH = m.homeTeam.toLowerCase() === fixtureHomeTeam.toLowerCase();
+            const gf = isH ? m.fthg : m.ftag;
+            const ga = isH ? m.ftag : m.fthg;
+            return {
+              date: m.matchDate,
+              opponent: isH ? m.awayTeam : m.homeTeam,
+              isHome: isH,
+              goalsFor: gf,
+              goalsAgainst: ga,
+              result: (gf > ga ? 'W' : gf < ga ? 'L' : 'D') as 'W' | 'D' | 'L',
+              competition: m.div || 'League',
+            };
+          });
+
+        const awayRecentMatches: TeamFormMatch[] = histMatches
+          .filter((m) => m.homeTeam.toLowerCase() === fixtureAwayTeam.toLowerCase() || m.awayTeam.toLowerCase() === fixtureAwayTeam.toLowerCase())
+          .slice(0, 10)
+          .map((m) => {
+            const isH = m.homeTeam.toLowerCase() === fixtureAwayTeam.toLowerCase();
+            const gf = isH ? m.fthg : m.ftag;
+            const ga = isH ? m.ftag : m.fthg;
+            return {
+              date: m.matchDate,
+              opponent: isH ? m.awayTeam : m.homeTeam,
+              isHome: isH,
+              goalsFor: gf,
+              goalsAgainst: ga,
+              result: (gf > ga ? 'W' : gf < ga ? 'L' : 'D') as 'W' | 'D' | 'L',
+              competition: m.div || 'League',
+            };
+          });
+
+        if (matched.length > 0 || homeRecentMatches.length > 0 || awayRecentMatches.length > 0) {
           let hWins = 0;
           let dws = 0;
           let aWins = 0;
@@ -742,14 +846,14 @@ export class FlashscoreScraperService {
             else if (gA > gH) aWins++;
             else dws++;
 
-            if (rec.length < 5) {
+            if (rec.length < 10) {
               rec.push({
                 date: m.matchDate,
                 homeTeam: m.homeTeam,
                 awayTeam: m.awayTeam,
                 score: `${m.fthg}-${m.ftag}`,
                 winner: m.fthg > m.ftag ? 'HOME' : m.ftag > m.fthg ? 'AWAY' : 'DRAW',
-                competition: 'League',
+                competition: m.div || 'League',
               });
             }
           }
@@ -760,11 +864,15 @@ export class FlashscoreScraperService {
             homeWins: hWins,
             draws: dws,
             awayWins: aWins,
-            homeGoalsAvg: Number((hGoals / mCount).toFixed(2)),
-            awayGoalsAvg: Number((aGoals / mCount).toFixed(2)),
+            homeGoalsAvg: mCount > 0 ? Number((hGoals / mCount).toFixed(2)) : 0,
+            awayGoalsAvg: mCount > 0 ? Number((aGoals / mCount).toFixed(2)) : 0,
             h2hMultiplierHome: 1.0,
             h2hMultiplierAway: 1.0,
             recentH2H: rec,
+            homeClub: fixtureHomeTeam,
+            awayClub: fixtureAwayTeam,
+            homeRecentMatches,
+            awayRecentMatches,
           };
           this.cacheH2H.set(cleanId, res);
           return res;
@@ -785,9 +893,93 @@ export class FlashscoreScraperService {
       h2hMultiplierHome: 1.0,
       h2hMultiplierAway: 1.0,
       recentH2H: [],
+      homeClub: fixtureHomeTeam,
+      awayClub: fixtureAwayTeam,
+      homeRecentMatches: [],
+      awayRecentMatches: [],
     };
     this.cacheH2H.set(cleanId, cleanZeroH2H);
     return cleanZeroH2H;
+  }
+
+  /**
+   * Parses recent match list for a specific club directly from scraper response
+   */
+  async getClubRecentMatches(clubName: string, matchId?: string): Promise<TeamFormMatch[]> {
+    if (!clubName) return [];
+    const target = clubName.toLowerCase().trim();
+
+    // 1. If matchId is provided, check cached or fetch H2H feed
+    if (matchId) {
+      const cleanId = matchId.replace(/^fs_/, '').trim();
+      const h2h = await this.getMatchHeadToHead(cleanId, clubName);
+      if (h2h.homeClub?.toLowerCase().includes(target) && h2h.homeRecentMatches && h2h.homeRecentMatches.length > 0) {
+        return h2h.homeRecentMatches;
+      }
+      if (h2h.awayClub?.toLowerCase().includes(target) && h2h.awayRecentMatches && h2h.awayRecentMatches.length > 0) {
+        return h2h.awayRecentMatches;
+      }
+      if (h2h.homeRecentMatches && h2h.homeRecentMatches.length > 0) {
+        return h2h.homeRecentMatches;
+      }
+      if (h2h.awayRecentMatches && h2h.awayRecentMatches.length > 0) {
+        return h2h.awayRecentMatches;
+      }
+    }
+
+    // 2. Check in cached H2H entries
+    for (const cached of this.cacheH2H.values()) {
+      if (cached.homeClub?.toLowerCase().includes(target) && cached.homeRecentMatches?.length) {
+        return cached.homeRecentMatches;
+      }
+      if (cached.awayClub?.toLowerCase().includes(target) && cached.awayRecentMatches?.length) {
+        return cached.awayRecentMatches;
+      }
+    }
+
+    // 3. Find fixture involving this club from upcoming fixtures
+    try {
+      const fixtures = await this.getUpcomingFixtures();
+      const match = fixtures.find(
+        (f) =>
+          f.homeTeam.toLowerCase().includes(target) ||
+          target.includes(f.homeTeam.toLowerCase()) ||
+          f.awayTeam.toLowerCase().includes(target) ||
+          target.includes(f.awayTeam.toLowerCase())
+      );
+      if (match && match.id) {
+        const cleanId = match.id.replace(/^fs_/, '');
+        const h2h = await this.getMatchHeadToHead(cleanId, match.homeTeam, match.awayTeam);
+        if (match.homeTeam.toLowerCase().includes(target) && h2h.homeRecentMatches?.length) {
+          return h2h.homeRecentMatches;
+        }
+        if (match.awayTeam.toLowerCase().includes(target) && h2h.awayRecentMatches?.length) {
+          return h2h.awayRecentMatches;
+        }
+      }
+    } catch (err) {
+      console.warn(`[FlashscoreScraper] Failed searching fixture for club ${clubName}:`, err);
+    }
+
+    // 4. Fallback to local SQLite matches
+    const histMatches = db.getAllHistoricalMatches(1500);
+    return histMatches
+      .filter((m) => m.homeTeam.toLowerCase().includes(target) || m.awayTeam.toLowerCase().includes(target))
+      .slice(0, 10)
+      .map((m) => {
+        const isH = m.homeTeam.toLowerCase().includes(target);
+        const gf = isH ? m.fthg : m.ftag;
+        const ga = isH ? m.ftag : m.fthg;
+        return {
+          date: m.matchDate,
+          opponent: isH ? m.awayTeam : m.homeTeam,
+          isHome: isH,
+          goalsFor: gf,
+          goalsAgainst: ga,
+          result: (gf > ga ? 'W' : gf < ga ? 'L' : 'D') as 'W' | 'D' | 'L',
+          competition: m.div || 'League',
+        };
+      });
   }
 }
 

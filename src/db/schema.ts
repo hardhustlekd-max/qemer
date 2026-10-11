@@ -328,6 +328,16 @@ export interface PredictionMeasurementsSchema {
   use_mockup_fallback_data: false;
 }
 
+export interface TeamFormMatchSchema {
+  date: string;
+  opponent: string;
+  isHome: boolean;
+  goalsFor: number;
+  goalsAgainst: number;
+  result: 'W' | 'D' | 'L';
+  competition?: string;
+}
+
 export interface FlashscoreScrapedH2HSchema {
   match_id: string; // Primary Key
   matches_count: number;
@@ -339,6 +349,10 @@ export interface FlashscoreScrapedH2HSchema {
   h2h_multiplier_home: number;
   h2h_multiplier_away: number;
   encounters_json: string; // Serialized HeadToHeadMatchRecord[]
+  home_club?: string;
+  away_club?: string;
+  home_recent_matches_json?: string; // Serialized TeamFormMatch[] parsed from scrapper response
+  away_recent_matches_json?: string; // Serialized TeamFormMatch[] parsed from scrapper response
   scraped_feed: 'df_hh_1';
   scraped_at: string;
   fallback_mockup_data: false;

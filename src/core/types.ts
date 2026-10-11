@@ -73,6 +73,10 @@ export interface HeadToHeadMeasurement {
   h2hMultiplierHome: number;
   h2hMultiplierAway: number;
   recentH2H: HeadToHeadMatchRecord[];
+  homeClub?: string;
+  awayClub?: string;
+  homeRecentMatches?: TeamFormMatch[];
+  awayRecentMatches?: TeamFormMatch[];
 }
 
 export interface PredictionEngineMeasurements {
@@ -86,6 +90,7 @@ export interface TeamFormMatch {
   goalsFor: number;
   goalsAgainst: number;
   result: 'W' | 'D' | 'L';
+  competition?: string;
 }
 
 export interface TeamStatsSummary {

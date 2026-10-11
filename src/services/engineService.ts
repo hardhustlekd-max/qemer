@@ -7,6 +7,7 @@ import {
   MarketOption,
   TrendingTipsData,
   HeadToHeadMeasurement,
+  TeamFormMatch,
 } from '../core/types.js';
 import { PoissonEngine } from '../core/poisson.js';
 import { AccumulatorGenerator, AccaGenerationParams, isMatchStarted } from '../core/accumulator.js';
@@ -313,6 +314,21 @@ export class EngineService {
     }
 
     return null;
+  }
+
+  /**
+   * Fetches recent match list for a specific club parsed directly from scraper response
+   */
+  public static async getClubRecentMatches(
+    clubName: string,
+    matchId?: string
+  ): Promise<TeamFormMatch[]> {
+    const query = matchId ? `?matchId=${encodeURIComponent(matchId)}` : '';
+    const serverData = await this.safeJsonFetch(`/api/fixtures/club/${encodeURIComponent(clubName)}/recent${query}`);
+    if (serverData && serverData.success && Array.isArray(serverData.matches)) {
+      return serverData.matches;
+    }
+    return [];
   }
 
   /**

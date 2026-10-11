@@ -43,16 +43,11 @@ export class PoissonEngine {
     teamName: string,
     allMatches: HistoricalMatch[],
     windowLimit = 15,
-    formDecayRate = 0.85
+    formDecayRate = 0.85,
+    scrapedRecentMatches?: TeamFormMatch[]
   ): TeamStatsSummary {
-    const teamMatches = allMatches
-      .filter(
-        (m) => m.homeTeam.toLowerCase() === teamName.toLowerCase() || m.awayTeam.toLowerCase() === teamName.toLowerCase()
-      )
-      .sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
-
-    const recentMatches = teamMatches.slice(0, Math.max(10, windowLimit));
-
+    let formList: ('W' | 'D' | 'L')[] = [];
+    let formattedRecent: TeamFormMatch[] = [];
     let homeMatchesCount = 0;
     let awayMatchesCount = 0;
     let homeGoalsScored = 0;
@@ -60,36 +55,58 @@ export class PoissonEngine {
     let awayGoalsScored = 0;
     let awayGoalsConceded = 0;
 
-    const formList: ('W' | 'D' | 'L')[] = [];
-    const formattedRecent: TeamFormMatch[] = [];
+    if (scrapedRecentMatches && scrapedRecentMatches.length > 0) {
+      formattedRecent = scrapedRecentMatches.slice(0, Math.max(10, windowLimit));
+      for (const m of formattedRecent) {
+        formList.push(m.result);
+        if (m.isHome) {
+          homeMatchesCount++;
+          homeGoalsScored += m.goalsFor;
+          homeGoalsConceded += m.goalsAgainst;
+        } else {
+          awayMatchesCount++;
+          awayGoalsScored += m.goalsFor;
+          awayGoalsConceded += m.goalsAgainst;
+        }
+      }
+    } else {
+      const teamMatches = allMatches
+        .filter(
+          (m) => m.homeTeam.toLowerCase() === teamName.toLowerCase() || m.awayTeam.toLowerCase() === teamName.toLowerCase()
+        )
+        .sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
 
-    for (const m of recentMatches) {
-      const isHome = m.homeTeam.toLowerCase() === teamName.toLowerCase();
-      const gf = isHome ? m.fthg : m.ftag;
-      const ga = isHome ? m.ftag : m.fthg;
+      const recentMatches = teamMatches.slice(0, Math.max(10, windowLimit));
 
-      let res: 'W' | 'D' | 'L' = 'D';
-      if (gf > ga) res = 'W';
-      else if (ga > gf) res = 'L';
+      for (const m of recentMatches) {
+        const isHome = m.homeTeam.toLowerCase() === teamName.toLowerCase();
+        const gf = isHome ? m.fthg : m.ftag;
+        const ga = isHome ? m.ftag : m.fthg;
 
-      formList.push(res);
-      formattedRecent.push({
-        date: m.matchDate,
-        opponent: isHome ? m.awayTeam : m.homeTeam,
-        isHome,
-        goalsFor: gf,
-        goalsAgainst: ga,
-        result: res,
-      });
+        let res: 'W' | 'D' | 'L' = 'D';
+        if (gf > ga) res = 'W';
+        else if (ga > gf) res = 'L';
 
-      if (isHome) {
-        homeMatchesCount++;
-        homeGoalsScored += gf;
-        homeGoalsConceded += ga;
-      } else {
-        awayMatchesCount++;
-        awayGoalsScored += gf;
-        awayGoalsConceded += ga;
+        formList.push(res);
+        formattedRecent.push({
+          date: m.matchDate,
+          opponent: isHome ? m.awayTeam : m.homeTeam,
+          isHome,
+          goalsFor: gf,
+          goalsAgainst: ga,
+          result: res,
+          competition: m.div,
+        });
+
+        if (isHome) {
+          homeMatchesCount++;
+          homeGoalsScored += gf;
+          homeGoalsConceded += ga;
+        } else {
+          awayMatchesCount++;
+          awayGoalsScored += gf;
+          awayGoalsConceded += ga;
+        }
       }
     }
 
@@ -128,7 +145,7 @@ export class PoissonEngine {
 
     const totalGoalsScored = homeGoalsScored + awayGoalsScored;
     const totalGoalsConceded = homeGoalsConceded + awayGoalsConceded;
-    const matchesPlayed = recentMatches.length || 1;
+    const matchesPlayed = formattedRecent.length || 1;
 
     return {
       teamName,
@@ -303,13 +320,15 @@ export class PoissonEngine {
       homeTeam,
       statsSource,
       settings.rollingMatchWindow,
-      settings.formDecayRate
+      settings.formDecayRate,
+      realScrapedH2H?.homeRecentMatches
     );
     const awayStats = this.computeTeamStats(
       awayTeam,
       statsSource,
       settings.rollingMatchWindow,
-      settings.formDecayRate
+      settings.formDecayRate,
+      realScrapedH2H?.awayRecentMatches
     );
 
     // League average goals
