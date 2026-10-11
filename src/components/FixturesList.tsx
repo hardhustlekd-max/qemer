@@ -239,7 +239,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   }, [activeScope, filteredUpcomingFixtures, liveFixtures, historyFixtures, selectedLeague, searchQuery]);
 
   return (
-    <div className="space-y-2.5 font-sans">
+    <div className="space-y-2.5 font-sans flex-1 flex flex-col">
       {/* Scope Sub-Tabs: Upcoming, Live, History placed above match list */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl shadow-xs shrink-0 overflow-x-auto no-scrollbar flex-nowrap">
@@ -287,14 +287,14 @@ export const FixturesList: React.FC<FixturesListProps> = ({
 
       {/* Match List Display (Wireframe or Cards) */}
       {(isLoading && activeScope === 'UPCOMING') || (isLoadingHistory && activeScope === 'HISTORY') ? (
-        <div className="bg-white dark:bg-[#0B0F17] rounded-3xl p-10 text-center shadow-sm space-y-3">
-          <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mx-auto" />
+        <div className="bg-white dark:bg-[#0B0F17] rounded-2xl sm:rounded-3xl p-8 sm:p-12 flex-1 min-h-[360px] flex flex-col items-center justify-center text-center shadow-xs space-y-3">
+          <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin shrink-0 mx-auto" />
           <p className="text-xs text-slate-500 font-medium">
             {activeScope === 'HISTORY' ? 'Loading Historical Match Results...' : 'Computing Poisson Match Predictions...'}
           </p>
         </div>
       ) : displayedFixtures.length === 0 ? (
-        <div className="bg-white dark:bg-[#0B0F17] rounded-3xl p-8 text-center shadow-sm space-y-2">
+        <div className="bg-white dark:bg-[#0B0F17] rounded-2xl sm:rounded-3xl p-8 flex-1 min-h-[360px] flex flex-col items-center justify-center text-center shadow-sm space-y-2">
           <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
             {activeScope === 'UPCOMING'
               ? 'No upcoming fixtures found matching your criteria.'

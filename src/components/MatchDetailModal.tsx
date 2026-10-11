@@ -28,9 +28,11 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
   const [activeTab, setActiveTab] = useState<ModalTab>('OVERVIEW');
   const [statFilterGroup, setStatFilterGroup] = useState<StatCategoryGroup>('ALL');
 
-  const pred = fixture.prediction!;
-  const homeStats = fixture.homeStats;
-  const awayStats = fixture.awayStats;
+  const [enrichedFixture, setEnrichedFixture] = useState<Fixture>(fixture);
+  const currentFixture = enrichedFixture;
+  const pred = currentFixture.prediction!;
+  const homeStats = currentFixture.homeStats;
+  const awayStats = currentFixture.awayStats;
 
   // Real Scraped Head to Head synchronization
   const initialH2H = pred.measurements?.h2h && pred.measurements.h2h.matchesCount > 0
@@ -49,9 +51,59 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
 
       try {
         setIsLoadingH2H(true);
+        // 1. Fetch full match detail from server (runs PoissonEngine with all scraped H2H & recent matches)
+        const detail = await EngineService.getMatchDetail(fixture.id);
+        if (!isCancelled && detail && detail.prediction) {
+          setEnrichedFixture(detail);
+          if (detail.prediction.measurements?.h2h) {
+            setScrapedH2H(detail.prediction.measurements.h2h);
+          }
+          return;
+        }
+
+        // 2. Direct H2H fallback
         const data = await EngineService.getMatchHeadToHead(fixture.id, fixture.homeTeam, fixture.awayTeam);
         if (!isCancelled && data) {
           setScrapedH2H(data);
+          // Recalculate prediction with all scraped H2H and recent match information
+          const { prediction: updatedPred, homeStats: updatedHome, awayStats: updatedAway } = PoissonEngine.predictMatch(
+            fixture.homeTeam,
+            fixture.awayTeam,
+            [],
+            {
+              activeProvider: 'FLASHSCORE',
+              rollingMatchWindow: 15,
+              minEVThreshold: 1.10,
+              safeWinThreshold: 0.72,
+              homeAdvantageFactor: 1.12,
+              formDecayRate: 0.85,
+              autoSyncDaily: true,
+            },
+            data
+          );
+          const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(
+            updatedPred,
+            fixture.odds,
+            {
+              activeProvider: 'FLASHSCORE',
+              rollingMatchWindow: 15,
+              minEVThreshold: 1.10,
+              safeWinThreshold: 0.72,
+              homeAdvantageFactor: 1.12,
+              formDecayRate: 0.85,
+              autoSyncDaily: true,
+            },
+            fixture.homeTeam,
+            fixture.awayTeam
+          );
+          setEnrichedFixture({
+            ...fixture,
+            prediction: updatedPred,
+            homeStats: updatedHome,
+            awayStats: updatedAway,
+            markets,
+            bestValueMarket,
+          });
         }
       } catch (err) {
         console.warn('Unable to load live H2H:', err);
@@ -66,7 +118,7 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
     return () => {
       isCancelled = true;
     };
-  }, [fixture.id, fixture.homeTeam, fixture.awayTeam]);
+  }, [fixture.id, fixture.homeTeam, fixture.awayTeam, initialH2H]);
 
   // Derived real recent matches parsed from scraper response
   const homeRecentMatchesList = useMemo(() => {
@@ -602,8 +654,8 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
                 </span>
 
                 {isLoadingH2H ? (
-                  <div className="py-8 text-center text-xs text-slate-500 font-mono flex items-center justify-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="py-8 min-h-[140px] text-center text-xs text-slate-500 font-mono flex flex-col items-center justify-center gap-2">
+                    <div className="w-5 h-5 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin shrink-0" />
                     <span>Loading records...</span>
                   </div>
                 ) : h2h.recentH2H && h2h.recentH2H.length > 0 ? (
@@ -935,8 +987,8 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
                     </div>
                   </div>
                 ) : isLoadingH2H ? (
-                  <div className="py-6 text-center text-xs text-slate-500 font-mono flex items-center justify-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="py-6 min-h-[160px] text-center text-xs text-slate-500 font-mono flex flex-col items-center justify-center gap-2">
+                    <div className="w-5 h-5 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin shrink-0" />
                     <span>Loading recent matches...</span>
                   </div>
                 ) : (
@@ -1101,8 +1153,8 @@ const MatchDetailModalContent: React.FC<{ fixture: Fixture; onClose: () => void 
                     </div>
                   </div>
                 ) : isLoadingH2H ? (
-                  <div className="py-6 text-center text-xs text-slate-500 font-mono flex items-center justify-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="py-6 min-h-[160px] text-center text-xs text-slate-500 font-mono flex flex-col items-center justify-center gap-2">
+                    <div className="w-5 h-5 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin shrink-0" />
                     <span>Loading recent matches...</span>
                   </div>
                 ) : (

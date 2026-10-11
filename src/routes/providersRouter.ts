@@ -3,6 +3,7 @@ import { providerManager } from '../providers/providerManager.js';
 import { db } from '../core/db.js';
 import { EngineSettings } from '../core/types.js';
 import { flashscoreScraperService } from '../services/flashscoreScraperService.js';
+import { PredictionPipelineService } from '../services/predictionPipelineService.js';
 
 export const providersRouter = Router();
 
@@ -81,11 +82,14 @@ providersRouter.post('/flashscore/sync', async (req, res) => {
   try {
     const syncRes = await flashscoreScraperService.syncHistoricalData(7);
     const upcoming = await flashscoreScraperService.getUpcomingFixtures();
+    const predRes = await PredictionPipelineService.predictAndStoreUpcomingFixtures(upcoming);
+
     res.json({
       success: true,
-      message: syncRes.message,
+      message: `Predictions updated in database (${predRes.count} fixtures)`,
       matchesCount: syncRes.matchesCount,
       upcomingCount: upcoming.length,
+      predictionsCount: predRes.count,
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Failed to sync Flashscore data' });

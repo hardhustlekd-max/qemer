@@ -325,7 +325,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     disabled={isSeeding}
                     className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
                   >
-                    {isSeeding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    {isSeeding ? <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 shrink-0" />}
                     <span>Ingest Standard Season CSVs</span>
                   </button>
 

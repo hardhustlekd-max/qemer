@@ -1,5 +1,6 @@
 import express, { Express } from 'express';
 import { db } from './core/db.js';
+import { predictionsDb } from './core/predictionsDb.js';
 import { fixturesRouter } from './routes/fixturesRouter.js';
 import { accumulatorRouter } from './routes/accumulatorRouter.js';
 import { settingsRouter } from './routes/settingsRouter.js';
@@ -17,6 +18,7 @@ export function createApp(): Express {
   app.use(async (_req, _res, next) => {
     try {
       await db.init();
+      await predictionsDb.init();
       next();
     } catch (err) {
       next(err);

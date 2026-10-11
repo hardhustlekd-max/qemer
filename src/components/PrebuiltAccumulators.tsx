@@ -130,8 +130,8 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
 
   if (isLoading && (!activeSlip || Object.keys(prebuiltSlips).length === 0)) {
     return (
-      <div className="p-8 text-center bg-white dark:bg-[#0B0F17] rounded-3xl shadow-xs space-y-3 font-sans">
-        <Loader2 className="w-7 h-7 text-emerald-500 animate-spin mx-auto" />
+      <div className="p-8 flex-1 min-h-[360px] flex flex-col items-center justify-center text-center bg-white dark:bg-[#0B0F17] rounded-2xl shadow-xs space-y-3 font-sans">
+        <Loader2 className="w-7 h-7 text-emerald-500 animate-spin shrink-0 mx-auto" />
         <h3 className="text-xs font-bold text-slate-900 dark:text-white">
           Loading Accumulators...
         </h3>
@@ -141,7 +141,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
 
   if (!fixtures || fixtures.length === 0) {
     return (
-      <div className="p-8 text-center bg-white dark:bg-[#0B0F17] rounded-3xl shadow-xs space-y-2 font-sans">
+      <div className="p-8 flex-1 min-h-[360px] flex flex-col items-center justify-center text-center bg-white dark:bg-[#0B0F17] rounded-2xl shadow-xs space-y-2 font-sans">
         <Layers className="w-7 h-7 text-slate-400 mx-auto" />
         <h3 className="text-xs font-bold text-slate-900 dark:text-white">
           No Fixtures Available
@@ -154,7 +154,7 @@ export const PrebuiltAccumulators: React.FC<PrebuiltAccumulatorsProps> = ({
   const potentialPayout = activeSlip ? (stakeBenchmark * activeSlip.combinedOdds).toFixed(2) : '0.00';
 
   return (
-    <div className="bg-white dark:bg-[#0B0F17] rounded-2xl p-3 shadow-xs space-y-3 font-sans">
+    <div className="bg-white dark:bg-[#0B0F17] rounded-2xl p-3 shadow-xs space-y-3 font-sans flex-1 flex flex-col">
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800">
         <div>

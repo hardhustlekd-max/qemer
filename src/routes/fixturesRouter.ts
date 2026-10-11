@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { db } from '../core/db.js';
+import { predictionsDb } from '../core/predictionsDb.js';
+import { PredictionPipelineService } from '../services/predictionPipelineService.js';
 import { providerManager } from '../providers/providerManager.js';
 import { PoissonEngine } from '../core/poisson.js';
 import { EngineSettings, Fixture } from '../core/types.js';
@@ -18,154 +20,33 @@ fixturesRouter.get('/', async (req, res) => {
     const startDate = req.query.startDate as string | undefined;
     const endDate = req.query.endDate as string | undefined;
 
-    const provider = providerManager.getActiveProvider();
-    const settings: EngineSettings = db.getSettings() || {
-      activeProvider: 'FLASHSCORE',
-      rollingMatchWindow: 15,
-      minEVThreshold: 1.10,
-      safeWinThreshold: 0.72,
-      homeAdvantageFactor: 1.12,
-      formDecayRate: 0.85,
-      autoSyncDaily: true,
-    };
+    await predictionsDb.init();
 
-    // Fetch fixtures from active provider
-    let fixtures = await provider.getUpcomingFixtures();
-
-    const todayStr = getRelativeDateStr(0);
-    const tomorrowStr = getRelativeDateStr(1);
-    const next3DaysStr = getRelativeDateStr(2);
-    const thisWeekStr = getRelativeDateStr(6);
-
-    // Deduplicate fixtures by ID and filter out past/started fixtures
-    const seenIds = new Set<string>();
-    fixtures = fixtures.filter((f) => {
-      if (!f.id || seenIds.has(f.id) || isMatchStarted(f)) return false;
-      seenIds.add(f.id);
-      return true;
-    });
-
-    // Retrieve all historical matches and DB scraped matches for real team form
-    const rawHist = db.getAllHistoricalMatches(1500);
-    const scrapedMatches = db.getFlashscoreScrapedMatches(500);
-    const scrapedAsHistorical: any[] = scrapedMatches
-      .filter((sm) => sm.result?.home !== undefined && sm.result?.away !== undefined)
-      .map((sm) => ({
-        div: sm.leagueName || sm.stage || 'FLASHSCORE',
-        matchDate: sm.date ? sm.date.slice(0, 10) : '2024-01-01',
-        homeTeam: sm.home.name,
-        awayTeam: sm.away.name,
-        fthg: parseInt(sm.result!.home!, 10) || 0,
-        ftag: parseInt(sm.result!.away!, 10) || 0,
-        ftr: (parseInt(sm.result!.home!, 10) || 0) > (parseInt(sm.result!.away!, 10) || 0) ? 'H' : (parseInt(sm.result!.home!, 10) || 0) < (parseInt(sm.result!.away!, 10) || 0) ? 'A' : 'D',
-      }));
-    const allMatches = [...rawHist, ...scrapedAsHistorical];
-    const scrapedMap = new Map<string, any>();
-    for (const sm of scrapedMatches) {
-      if (sm.matchId) {
-        scrapedMap.set(sm.matchId, sm);
-        scrapedMap.set(`fs_${sm.matchId}`, sm);
-      }
-      if (sm.home?.name && sm.away?.name) {
-        scrapedMap.set(`${sm.home.name.toLowerCase()}__${sm.away.name.toLowerCase()}`, sm);
-      }
+    // If predictions database has no records yet (e.g. before initial sync is run), populate it
+    if (predictionsDb.count() === 0) {
+      const provider = providerManager.getActiveProvider();
+      const initialUpcoming = await provider.getUpcomingFixtures();
+      await PredictionPipelineService.predictAndStoreUpcomingFixtures(initialUpcoming);
     }
 
-    // Process EVERY fixture through the Poisson engine first
-    const enrichedFixtures: Fixture[] = fixtures.map((f) => {
-      // Filter league-specific historical data
-      const leagueMatches = allMatches.filter((m) => m.div.toUpperCase() === f.league.toUpperCase());
-      const historicalContext = leagueMatches.length >= 10 ? leagueMatches : allMatches;
-
-      const { prediction, homeStats, awayStats } = PoissonEngine.predictMatch(
-        f.homeTeam,
-        f.awayTeam,
-        historicalContext,
-        settings,
-        null,
-        allMatches
-      );
-
-      const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(
-        prediction,
-        f.odds,
-        settings,
-        f.homeTeam,
-        f.awayTeam
-      );
-
-      const sm = scrapedMap.get(f.id) ||
-        scrapedMap.get(f.id.replace('fs_', '')) ||
-        scrapedMap.get(`${f.homeTeam.toLowerCase()}__${f.awayTeam.toLowerCase()}`);
-
-      const stage = sm?.stage || f.stage;
-      const homeBadge = sm?.home?.image || f.homeBadge;
-      const awayBadge = sm?.away?.image || f.awayBadge;
-      const information = (sm?.information && sm.information.length > 0) ? sm.information : f.information;
-      const statistics = (sm?.statistics && sm.statistics.length > 0) ? sm.statistics : f.statistics;
-      const resultDetails = sm?.result ? {
-        regulationTime: sm.result.regulationTime,
-        penalties: sm.result.penalties,
-      } : f.resultDetails;
-
-      return {
-        ...f,
-        stage,
-        homeBadge,
-        awayBadge,
-        information,
-        statistics,
-        resultDetails,
-        prediction,
-        markets,
-        bestValueMarket,
-        homeStats,
-        awayStats,
-        measurements: prediction.measurements,
-      };
-    });
-
-    // Apply filters if specifically requested via query params
-    let resultFixtures = enrichedFixtures;
-
-    if (leagueFilter && leagueFilter !== 'ALL') {
-      resultFixtures = resultFixtures.filter((f) => f.league.toUpperCase() === leagueFilter.toUpperCase());
-    }
-
-    if (dateParam) {
-      resultFixtures = resultFixtures.filter((f) => f.matchDate === dateParam);
-    } else if (dateFilter === 'TODAY') {
-      resultFixtures = resultFixtures.filter((f) => f.matchDate === todayStr);
-    } else if (dateFilter === 'TOMORROW') {
-      resultFixtures = resultFixtures.filter((f) => f.matchDate === tomorrowStr);
-    } else if (dateFilter === 'NEXT_3_DAYS') {
-      resultFixtures = resultFixtures.filter((f) => f.matchDate >= todayStr && f.matchDate <= next3DaysStr);
-    } else if (dateFilter === 'THIS_WEEK') {
-      resultFixtures = resultFixtures.filter((f) => f.matchDate >= todayStr && f.matchDate <= thisWeekStr);
-    } else if (dateFilter === 'CUSTOM') {
-      if (startDate) resultFixtures = resultFixtures.filter((f) => f.matchDate >= startDate);
-      if (endDate) resultFixtures = resultFixtures.filter((f) => f.matchDate <= endDate);
-    }
-
-    // Sort prioritizing major popular leagues on top of the list
-    resultFixtures.sort((a, b) => {
-      const priorityA = getLeaguePriority(a.league, a.leagueName, a.stage);
-      const priorityB = getLeaguePriority(b.league, b.leagueName, b.stage);
-      if (priorityA !== priorityB) return priorityA - priorityB;
-      if (a.matchDate !== b.matchDate) return a.matchDate.localeCompare(b.matchDate);
-      return (a.kickOffTime || '').localeCompare(b.kickOffTime || '');
+    // Display predictions queried directly from the separate predictions db
+    const resultFixtures = predictionsDb.getPredictions({
+      league: leagueFilter,
+      date: dateParam,
+      dateFilter,
+      startDate,
+      endDate,
     });
 
     res.json({
       success: true,
-      provider: provider.name,
+      provider: 'PREDICTIONS_DB',
       count: resultFixtures.length,
-      totalProcessed: enrichedFixtures.length,
       fixtures: resultFixtures,
     });
   } catch (err: any) {
-    console.error('Error fetching fixtures:', err);
-    res.status(500).json({ success: false, error: err?.message || 'Failed to fetch fixtures' });
+    console.error('Error fetching fixtures from predictions db:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Failed to fetch predictions' });
   }
 });
 
@@ -270,6 +151,10 @@ fixturesRouter.get('/:id/h2h', async (req, res) => {
     const awayTeam = req.query.away as string | undefined;
     const cleanId = fixtureId.replace(/^fs_/, '');
     const h2h = await flashscoreScraperService.getMatchHeadToHead(cleanId, homeTeam, awayTeam);
+    if (h2h) {
+      db.savePredictionMeasurement(cleanId, h2h);
+      db.savePredictionMeasurement(fixtureId, h2h);
+    }
     res.json({ success: true, h2h });
   } catch (err: any) {
     console.error('Error fetching fixture H2H:', err);
@@ -280,6 +165,15 @@ fixturesRouter.get('/:id/h2h', async (req, res) => {
 fixturesRouter.get('/:id', async (req, res) => {
   try {
     const fixtureId = req.params.id;
+    await predictionsDb.init();
+    const stored = predictionsDb.getPredictionById(fixtureId);
+    if (stored) {
+      return res.json({
+        success: true,
+        fixture: stored,
+      });
+    }
+
     const provider = providerManager.getActiveProvider();
     const fixtures = await provider.getUpcomingFixtures();
     const f = fixtures.find(
@@ -320,6 +214,11 @@ fixturesRouter.get('/:id', async (req, res) => {
     // Scrape real head-to-head match history directly from Flashscore feed
     const cleanId = (f.id || fixtureId).replace(/^fs_/, '');
     const realH2H = await flashscoreScraperService.getMatchHeadToHead(cleanId, f.homeTeam, f.awayTeam);
+    if (realH2H) {
+      db.savePredictionMeasurement(cleanId, realH2H);
+      db.savePredictionMeasurement(f.id, realH2H);
+      db.savePredictionMeasurement(fixtureId, realH2H);
+    }
 
     const { prediction, homeStats, awayStats } = PoissonEngine.predictMatch(
       f.homeTeam,

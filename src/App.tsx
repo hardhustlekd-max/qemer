@@ -53,16 +53,16 @@ export default function App() {
   const handleSyncData = async () => {
     try {
       setIsSyncingData(true);
-      showNotification('Synchronizing real Flashscore live data...');
+      showNotification('Synchronizing data and predictions...');
       const res = await EngineService.syncFlashscoreData();
       if (res.success) {
         await Promise.all([fetchFixtures(), fetchSettingsAndProviders()]);
-        showNotification(res.message || 'Flashscore data synchronized successfully!');
+        showNotification(res.message || 'Predictions updated from database');
       } else {
         showNotification(res.message || 'Failed to sync data');
       }
     } catch (err: any) {
-      showNotification('Error syncing data: ' + (err?.message || err));
+      showNotification('Error syncing data');
     } finally {
       setIsSyncingData(false);
     }
@@ -223,7 +223,7 @@ export default function App() {
       />
 
       {/* Main Content Dashboard */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-2.5 space-y-2.5">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-2 sm:px-4 py-2.5 space-y-2.5 flex flex-col pb-4">
         {activeTab === 'FIXTURES' && (
           <FixturesList
             fixtures={fixtures}

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import initSqlJs, { Database, SqlValue } from 'sql.js';
-import { HistoricalMatch, Fixture, EngineSettings } from './types.js';
+import { HistoricalMatch, Fixture, EngineSettings, HeadToHeadMeasurement } from './types.js';
 import { getRelativeDateStr } from './seedData.js';
 import { getInitialHistoricalMatches, getInitialUpcomingFixtures } from './initialDbDataset.js';
 
@@ -219,6 +219,14 @@ export class FootballDB {
       );
 
       CREATE INDEX IF NOT EXISTS idx_prebuilt_cache_scope ON prebuilt_accumulators_cache(date_scope);
+
+      CREATE TABLE IF NOT EXISTS prediction_measurements_cache (
+        fixture_id TEXT PRIMARY KEY,
+        h2h_json TEXT NOT NULL,
+        calculated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_pred_measurements_fixture ON prediction_measurements_cache(fixture_id);
     `);
 
     // Insert default settings if not exists
@@ -875,6 +883,61 @@ export class FootballDB {
     } catch {
       return [];
     }
+  }
+
+  savePredictionMeasurement(fixtureId: string, h2h: HeadToHeadMeasurement): void {
+    if (!this.db || !fixtureId) return;
+    try {
+      const stmt = this.db.prepare(`
+        INSERT OR REPLACE INTO prediction_measurements_cache (fixture_id, h2h_json, calculated_at)
+        VALUES (?, ?, ?)
+      `);
+      stmt.run([fixtureId, JSON.stringify(h2h), new Date().toISOString()]);
+      stmt.free();
+      this.saveToDisk();
+    } catch (e) {
+      console.warn('Failed to save prediction measurement to cache:', e);
+    }
+  }
+
+  getPredictionMeasurement(fixtureId: string): HeadToHeadMeasurement | null {
+    if (!this.db || !fixtureId) return null;
+    try {
+      const stmt = this.db.prepare('SELECT h2h_json FROM prediction_measurements_cache WHERE fixture_id = ?');
+      stmt.bind([fixtureId]);
+      if (stmt.step()) {
+        const row = stmt.getAsObject();
+        stmt.free();
+        if (row.h2h_json) {
+          return JSON.parse(row.h2h_json as string);
+        }
+      } else {
+        stmt.free();
+      }
+    } catch (e) {
+      console.warn('Failed to get prediction measurement from cache:', e);
+    }
+    return null;
+  }
+
+  getAllPredictionMeasurements(): Map<string, HeadToHeadMeasurement> {
+    const map = new Map<string, HeadToHeadMeasurement>();
+    if (!this.db) return map;
+    try {
+      const stmt = this.db.prepare('SELECT fixture_id, h2h_json FROM prediction_measurements_cache');
+      while (stmt.step()) {
+        const row = stmt.getAsObject();
+        if (row.fixture_id && row.h2h_json) {
+          try {
+            map.set(row.fixture_id as string, JSON.parse(row.h2h_json as string));
+          } catch {}
+        }
+      }
+      stmt.free();
+    } catch (e) {
+      console.warn('Failed to get all prediction measurements:', e);
+    }
+    return map;
   }
 
   private mapRowToHistoricalMatch(row: Record<string, SqlValue>): HistoricalMatch {

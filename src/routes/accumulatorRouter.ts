@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../core/db.js';
+import { predictionsDb } from '../core/predictionsDb.js';
 import { providerManager } from '../providers/providerManager.js';
 import { PoissonEngine } from '../core/poisson.js';
 import { AccumulatorGenerator, AccaGenerationParams, isMatchStarted } from '../core/accumulator.js';
@@ -28,7 +29,11 @@ async function handlePrebuiltGeneration(req: any, res: any) {
     if (Array.isArray(clientFixtures) && clientFixtures.length > 0) {
       fixturesToUse = clientFixtures;
     } else {
-      const provider = providerManager.getActiveProvider();
+      await predictionsDb.init();
+      if (predictionsDb.count() > 0) {
+        fixturesToUse = predictionsDb.getAllPredictions();
+      } else {
+        const provider = providerManager.getActiveProvider();
       const rawFixtures = await provider.getUpcomingFixtures();
       const rawHist = db.getAllHistoricalMatches(1500);
       const scrapedMatches = db.getFlashscoreScrapedMatches(500);
@@ -48,17 +53,22 @@ async function handlePrebuiltGeneration(req: any, res: any) {
           ast: sm.stats?.awayShotsOnTarget || 0,
         }));
       const allMatches = [...scrapedAsHistorical, ...rawHist];
+      const cachedH2HMap = db.getAllPredictionMeasurements();
 
       fixturesToUse = rawFixtures.map((f) => {
         const leagueMatches = allMatches.filter((m) => m.div.toUpperCase() === f.league.toUpperCase());
         const historicalContext = leagueMatches.length >= 10 ? leagueMatches : allMatches;
+        const cleanId = (f.id || '').replace(/^fs_/, '');
+        const cachedH2H = cachedH2HMap.get(cleanId) ||
+          cachedH2HMap.get(f.id) ||
+          (f.prediction?.measurements?.h2h && f.prediction.measurements.h2h.matchesCount > 0 ? f.prediction.measurements.h2h : null);
 
         const { prediction, homeStats, awayStats } = PoissonEngine.predictMatch(
           f.homeTeam,
           f.awayTeam,
           historicalContext,
           settings,
-          null,
+          cachedH2H,
           allMatches
         );
 
@@ -79,6 +89,7 @@ async function handlePrebuiltGeneration(req: any, res: any) {
           awayStats,
         };
       });
+      }
     }
 
     // Exclude matches that have already started or kicked off
@@ -196,18 +207,23 @@ accumulatorRouter.post('/generate', async (req, res) => {
 
     const rawFixtures = await provider.getUpcomingFixtures();
     const allMatches = db.getAllHistoricalMatches(1500);
+    const cachedH2HMap = db.getAllPredictionMeasurements();
 
     // Enrich all fixtures with Poisson predictions & markets
     const enrichedFixtures: Fixture[] = rawFixtures.map((f) => {
       const leagueMatches = allMatches.filter((m) => m.div.toUpperCase() === f.league.toUpperCase());
       const historicalContext = leagueMatches.length >= 10 ? leagueMatches : allMatches;
+      const cleanId = (f.id || '').replace(/^fs_/, '');
+      const cachedH2H = cachedH2HMap.get(cleanId) ||
+        cachedH2HMap.get(f.id) ||
+        (f.prediction?.measurements?.h2h && f.prediction.measurements.h2h.matchesCount > 0 ? f.prediction.measurements.h2h : null);
 
       const { prediction, homeStats, awayStats } = PoissonEngine.predictMatch(
         f.homeTeam,
         f.awayTeam,
         historicalContext,
         settings,
-        null,
+        cachedH2H,
         allMatches
       );
 

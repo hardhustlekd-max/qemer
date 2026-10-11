@@ -58,10 +58,10 @@ export const Header: React.FC<HeaderProps> = ({
               id="sync-data-btn"
               onClick={onSyncData}
               disabled={isSyncingData}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50 shrink-0"
               title="Sync Live Data from Flashscore"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingData ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isSyncingData ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Sync Data</span>
             </button>
           )}

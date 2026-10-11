@@ -358,6 +358,54 @@ export interface FlashscoreScrapedH2HSchema {
   fallback_mockup_data: false;
 }
 
+export interface UpcomingPredictionRecordSchema {
+  fixture_id: string; // Primary Key
+  league: string;
+  league_name: string;
+  stage?: string | null;
+  match_date: string; // YYYY-MM-DD
+  kick_off_time: string; // HH:MM
+  home_team: string;
+  away_team: string;
+  home_badge?: string | null;
+  away_badge?: string | null;
+  status: string;
+  b365_h: number;
+  b365_d: number;
+  b365_a: number;
+  b365_over25?: number | null;
+  b365_under25?: number | null;
+  b365_btts_yes?: number | null;
+  b365_btts_no?: number | null;
+  home_xg: number;
+  away_xg: number;
+  home_win_prob: number;
+  draw_prob: number;
+  away_win_prob: number;
+  over15_prob: number;
+  over25_prob: number;
+  over35_prob: number;
+  btts_prob: number;
+  tip_key: string;
+  tip_name: string;
+  tip_odds: number;
+  tip_prob: number;
+  tip_ev: number;
+  is_positive_ev: number;
+  is_banker: number;
+  full_fixture_json: string; // Serialized complete Fixture with markets, stats & matrix
+  predicted_at: string;
+}
+
+export interface PredictionsDatabaseConfigSchema {
+  database_file: './data/predictions.sqlite';
+  is_separate_db: true;
+  storage_target: 'SEPARATE_PREDICTIONS_SQLITE';
+  sync_triggers_recalculation: true;
+  serve_display_from_db: true;
+  updated_at: string;
+}
+
 export const DDL_STATEMENTS = {
   createHistoricalMatches: `
     CREATE TABLE IF NOT EXISTS historical_matches (
@@ -481,5 +529,47 @@ export const DDL_STATEMENTS = {
       calculated_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_pred_measurements_fixture ON prediction_measurements_cache(fixture_id);
+  `,
+  createUpcomingPredictionsTable: `
+    CREATE TABLE IF NOT EXISTS upcoming_predictions (
+      fixture_id TEXT PRIMARY KEY,
+      league TEXT NOT NULL,
+      league_name TEXT NOT NULL,
+      stage TEXT,
+      match_date TEXT NOT NULL,
+      kick_off_time TEXT NOT NULL,
+      home_team TEXT NOT NULL,
+      away_team TEXT NOT NULL,
+      home_badge TEXT,
+      away_badge TEXT,
+      status TEXT NOT NULL DEFAULT 'SCHEDULED',
+      b365_h REAL NOT NULL,
+      b365_d REAL NOT NULL,
+      b365_a REAL NOT NULL,
+      b365_over25 REAL,
+      b365_under25 REAL,
+      b365_btts_yes REAL,
+      b365_btts_no REAL,
+      home_xg REAL NOT NULL,
+      away_xg REAL NOT NULL,
+      home_win_prob REAL NOT NULL,
+      draw_prob REAL NOT NULL,
+      away_win_prob REAL NOT NULL,
+      over15_prob REAL NOT NULL,
+      over25_prob REAL NOT NULL,
+      over35_prob REAL NOT NULL,
+      btts_prob REAL NOT NULL,
+      tip_key TEXT NOT NULL,
+      tip_name TEXT NOT NULL,
+      tip_odds REAL NOT NULL,
+      tip_prob REAL NOT NULL,
+      tip_ev REAL NOT NULL,
+      is_positive_ev INTEGER NOT NULL DEFAULT 0,
+      is_banker INTEGER NOT NULL DEFAULT 0,
+      full_fixture_json TEXT NOT NULL,
+      predicted_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pred_date ON upcoming_predictions(match_date);
+    CREATE INDEX IF NOT EXISTS idx_pred_league ON upcoming_predictions(league);
   `,
 };
