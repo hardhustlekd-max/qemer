@@ -28,6 +28,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'WIREFRAME' | 'CARDS'>('WIREFRAME');
   const [isLeagueModalOpen, setIsLeagueModalOpen] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<'DEFAULT' | 'PROB_DESC' | 'PROB_ASC' | 'HOME_DESC' | 'DRAW_DESC' | 'AWAY_DESC'>('DEFAULT');
 
   const [settings, setSettings] = useState<EngineSettings | null>(null);
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
@@ -220,6 +221,8 @@ export default function App() {
         viewMode={viewMode}
         setViewMode={setViewMode}
         setIsLeagueModalOpen={setIsLeagueModalOpen}
+        sortBy={sortBy}
+        onSelectSortBy={setSortBy}
       />
 
       {/* Main Content Dashboard */}
@@ -242,6 +245,8 @@ export default function App() {
             setViewMode={setViewMode}
             isLeagueModalOpen={isLeagueModalOpen}
             setIsLeagueModalOpen={setIsLeagueModalOpen}
+            sortBy={sortBy}
+            onSelectSortBy={setSortBy}
           />
         )}
 

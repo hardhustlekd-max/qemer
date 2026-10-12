@@ -27,6 +27,12 @@ fixturesRouter.get('/', async (req, res) => {
       const provider = providerManager.getActiveProvider();
       const initialUpcoming = await provider.getUpcomingFixtures();
       await PredictionPipelineService.predictAndStoreUpcomingFixtures(initialUpcoming);
+
+      // If upcoming has live fixtures, store in live_predictions table as well
+      const liveInUpcoming = initialUpcoming.filter((f) => f.status === 'LIVE');
+      if (liveInUpcoming.length > 0 && predictionsDb.countLivePredictions() === 0) {
+        await PredictionPipelineService.predictAndStoreLiveFixtures(liveInUpcoming);
+      }
     }
 
     // Display predictions queried directly from the separate predictions db
@@ -50,58 +56,107 @@ fixturesRouter.get('/', async (req, res) => {
   }
 });
 
+fixturesRouter.get('/live', async (req, res) => {
+  try {
+    const league = req.query.league as string | undefined;
+    const limit = parseInt((req.query.limit as string) || '100', 10);
+
+    await predictionsDb.init();
+
+    // If predictions db has no live records yet, load live from provider, predict and store
+    if (predictionsDb.countLivePredictions() === 0) {
+      const activeProvider = providerManager.getActiveProvider();
+      const liveScores = await activeProvider.getLiveScores();
+      let liveFixtures: Fixture[] = [];
+      if (liveScores && liveScores.length > 0) {
+        liveFixtures = liveScores.map((s) => ({
+          id: s.fixtureId,
+          providerId: 'FLASHSCORE',
+          league: 'ALL',
+          leagueName: 'Live In-Play',
+          matchDate: getRelativeDateStr(0),
+          kickOffTime: s.status === 'FINISHED' ? 'FT' : `${s.minute}'`,
+          homeTeam: s.homeTeam,
+          awayTeam: s.awayTeam,
+          status: 'LIVE' as const,
+          minute: s.minute,
+          score: { home: s.homeScore, away: s.awayScore },
+          odds: {
+            homeWin: 2.10,
+            draw: 3.30,
+            awayWin: 3.40,
+            over25: 1.85,
+            under25: 1.95,
+          },
+        }));
+      }
+
+      if (liveFixtures.length === 0) {
+        const upcoming = db.getUpcomingFixtures();
+        const liveFromDb = upcoming.filter((f) => f.status === 'LIVE');
+        if (liveFromDb.length > 0) {
+          liveFixtures = liveFromDb;
+        }
+      }
+
+      if (liveFixtures.length > 0) {
+        await PredictionPipelineService.predictAndStoreLiveFixtures(liveFixtures);
+      }
+    }
+
+    const livePredictions = predictionsDb.getLivePredictions({ league, limit });
+
+    res.json({
+      success: true,
+      provider: 'PREDICTIONS_DB',
+      count: livePredictions.length,
+      fixtures: livePredictions,
+    });
+  } catch (err: any) {
+    console.error('Error fetching live predictions from predictions db:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Failed to fetch live predictions' });
+  }
+});
+
 fixturesRouter.get('/history', async (req, res) => {
   try {
     const league = req.query.league as string | undefined;
     const limit = parseInt((req.query.limit as string) || '300', 10);
-    const rawMatches = league && league !== 'ALL'
-      ? db.getLeagueHistoricalMatches(league, limit)
-      : db.getAllHistoricalMatches(limit);
 
-    const scrapedMatches = db.getFlashscoreScrapedMatches(500);
-    const scrapedAsHistorical: any[] = scrapedMatches
-      .filter((sm) => sm.result?.home !== undefined && sm.result?.away !== undefined)
-      .map((sm, idx) => ({
-        id: sm.matchId || `scraped_${idx}`,
-        div: sm.leagueName || sm.stage || 'FLASHSCORE',
-        matchDate: sm.date ? sm.date.slice(0, 10) : '2024-01-01',
-        homeTeam: sm.home.name,
-        awayTeam: sm.away.name,
-        fthg: parseInt(sm.result!.home!, 10) || 0,
-        ftag: parseInt(sm.result!.away!, 10) || 0,
-        ftr: (parseInt(sm.result!.home!, 10) || 0) > (parseInt(sm.result!.away!, 10) || 0) ? 'H' : (parseInt(sm.result!.home!, 10) || 0) < (parseInt(sm.result!.away!, 10) || 0) ? 'A' : 'D',
-      }));
+    await predictionsDb.init();
 
-    let allMatches = [...rawMatches, ...scrapedAsHistorical];
-
-    if (league && league !== 'ALL') {
-      const upperLeague = league.toUpperCase();
-      const leagueMapping: Record<string, string> = {
-        'PREMIER LEAGUE': 'E0',
-        'LA LIGA': 'SP1',
-        'BUNDESLIGA': 'D1',
-        'SERIE A': 'I1',
-        'LIGUE 1': 'F1',
-        'EFL CHAMPIONSHIP': 'E1',
-      };
-      const mappedCode = leagueMapping[league.toUpperCase()] || upperLeague;
-
-      allMatches = allMatches.filter((m) => {
-        const divUpper = (m.div || '').toUpperCase();
-        return divUpper === upperLeague || divUpper === mappedCode || divUpper.includes(upperLeague);
-      });
+    // If historical predictions db has no records yet, populate with raw historical and scraped matches
+    if (predictionsDb.countHistoricalPredictions() === 0) {
+      const rawMatches = db.getAllHistoricalMatches(1500);
+      const scrapedMatches = db.getFlashscoreScrapedMatches(500);
+      const scrapedAsHistorical: any[] = scrapedMatches
+        .filter((sm) => sm.result?.home !== undefined && sm.result?.away !== undefined)
+        .map((sm, idx) => ({
+          id: sm.matchId || `scraped_${idx}`,
+          div: sm.leagueName || sm.stage || 'FLASHSCORE',
+          leagueName: sm.leagueName || sm.stage || 'FLASHSCORE',
+          matchDate: sm.date ? sm.date.slice(0, 10) : '2024-01-01',
+          homeTeam: sm.home.name,
+          awayTeam: sm.away.name,
+          fthg: parseInt(sm.result!.home!, 10) || 0,
+          ftag: parseInt(sm.result!.away!, 10) || 0,
+          ftr: (parseInt(sm.result!.home!, 10) || 0) > (parseInt(sm.result!.away!, 10) || 0) ? 'H' : (parseInt(sm.result!.home!, 10) || 0) < (parseInt(sm.result!.away!, 10) || 0) ? 'A' : 'D',
+        }));
+      const allHist = [...rawMatches, ...scrapedAsHistorical];
+      await PredictionPipelineService.predictAndStoreHistoricalMatches(allHist);
     }
 
-    allMatches.sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime());
-    const matches = allMatches.slice(0, limit);
+    // Load predictions from predictions db
+    const matches = predictionsDb.getHistoricalPredictions({ league, limit });
 
     res.json({
       success: true,
+      provider: 'PREDICTIONS_DB',
       count: matches.length,
       matches,
     });
   } catch (err: any) {
-    console.error('Error fetching historical matches:', err);
+    console.error('Error fetching historical matches from predictions db:', err);
     res.status(500).json({ success: false, error: err?.message || 'Failed to fetch history' });
   }
 });

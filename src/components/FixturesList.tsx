@@ -25,6 +25,35 @@ interface FixturesListProps {
   setViewMode: (v: any) => void;
   isLeagueModalOpen: boolean;
   setIsLeagueModalOpen: (b: boolean) => void;
+  sortBy?: 'DEFAULT' | 'PROB_DESC' | 'PROB_ASC' | 'HOME_DESC' | 'DRAW_DESC' | 'AWAY_DESC';
+  onSelectSortBy?: (s: 'DEFAULT' | 'PROB_DESC' | 'PROB_ASC' | 'HOME_DESC' | 'DRAW_DESC' | 'AWAY_DESC') => void;
+}
+
+function getTipProb(fixture: Fixture): number {
+  const p = fixture.prediction;
+  if (!p) return 45;
+  const h = p.homeWinProb ?? 0;
+  const d = p.drawProb ?? 0;
+  const a = p.awayWinProb ?? 0;
+  return Math.round(Math.max(h, d, a) * 100);
+}
+
+function getHomeProb(fixture: Fixture): number {
+  return fixture.prediction?.homeWinProb !== undefined
+    ? Math.round(fixture.prediction.homeWinProb * 100)
+    : 45;
+}
+
+function getDrawProb(fixture: Fixture): number {
+  return fixture.prediction?.drawProb !== undefined
+    ? Math.round(fixture.prediction.drawProb * 100)
+    : 28;
+}
+
+function getAwayProb(fixture: Fixture): number {
+  return fixture.prediction?.awayWinProb !== undefined
+    ? Math.round(fixture.prediction.awayWinProb * 100)
+    : 27;
 }
 
 export const FixturesList: React.FC<FixturesListProps> = ({
@@ -40,10 +69,14 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   viewMode,
   isLeagueModalOpen,
   setIsLeagueModalOpen,
+  sortBy = 'DEFAULT',
+  onSelectSortBy,
 }) => {
   const [activeScope, setActiveScope] = useState<'UPCOMING' | 'LIVE' | 'HISTORY'>('UPCOMING');
   const [historyFixtures, setHistoryFixtures] = useState<Fixture[]>([]);
+  const [livePredictionsFixtures, setLivePredictionsFixtures] = useState<Fixture[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
+  const [isLoadingLive, setIsLoadingLive] = useState<boolean>(false);
 
   const datasetDates = useMemo(() => {
     return Array.from(new Set(fixtures.map((f) => f.matchDate))).filter(Boolean).sort();
@@ -57,7 +90,35 @@ export const FixturesList: React.FC<FixturesListProps> = ({
     return datasetDates[0] || localToday;
   }, [fixtures, datasetDates]);
 
-  // Load history fixtures when history tab is active or selected league changes
+  // Load predictions for live games directly from predictions db
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchLivePredictions() {
+      try {
+        setIsLoadingLive(true);
+        const data = await EngineService.getLivePredictions(selectedLeague, 100);
+        if (!isCancelled && data && data.length > 0) {
+          setLivePredictionsFixtures(data);
+        }
+      } catch (err) {
+        console.error('Failed to load live predictions from db:', err);
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingLive(false);
+        }
+      }
+    }
+
+    if (activeScope === 'LIVE') {
+      fetchLivePredictions();
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeScope, selectedLeague, liveScores]);
+
+  // Load history predictions from predictions db when history tab is active or selected league changes
   useEffect(() => {
     let isCancelled = false;
     async function fetchHistory() {
@@ -68,7 +129,7 @@ export const FixturesList: React.FC<FixturesListProps> = ({
           setHistoryFixtures(data);
         }
       } catch (err) {
-        console.error('Failed to load history matches:', err);
+        console.error('Failed to load history predictions from db:', err);
       } finally {
         if (!isCancelled) {
           setIsLoadingHistory(false);
@@ -154,9 +215,26 @@ export const FixturesList: React.FC<FixturesListProps> = ({
   }, [fixtures, uniqueFixtures, dateFilter, selectedLeague, searchQuery, baseToday]);
 
   const liveFixtures: Fixture[] = useMemo(() => {
+    // 1. Predictions loaded directly from separate predictions db
+    const fromPredictionsDb = livePredictionsFixtures || [];
+
+    // 2. Fixtures present in upcoming that are marked LIVE
     const liveFromFixtures = uniqueFixtures.filter((f) => f.status === 'LIVE');
 
+    // 3. Fixtures derived from active live scores
     const liveFromScores: Fixture[] = (liveScores || []).map((s) => {
+      const matchInPredictionsDb = fromPredictionsDb.find(
+        (f) => f.id === s.fixtureId || f.id === `fs_${s.fixtureId}` || f.id.replace('fs_', '') === s.fixtureId
+      );
+      if (matchInPredictionsDb) {
+        return {
+          ...matchInPredictionsDb,
+          minute: s.minute,
+          score: { home: s.homeScore, away: s.awayScore },
+          kickOffTime: s.status === 'FINISHED' ? 'FT' : `${s.minute}'`,
+        };
+      }
+
       const matchInUpcoming = uniqueFixtures.find(
         (f) => f.id === s.fixtureId || f.id === `fs_${s.fixtureId}` || f.id.replace('fs_', '') === s.fixtureId
       );
@@ -186,7 +264,8 @@ export const FixturesList: React.FC<FixturesListProps> = ({
 
     const seen = new Set<string>();
     const combined: Fixture[] = [];
-    for (const f of [...liveFromFixtures, ...liveFromScores]) {
+    // Prioritize fromPredictionsDb, then liveFromScores, then liveFromFixtures
+    for (const f of [...fromPredictionsDb, ...liveFromScores, ...liveFromFixtures]) {
       if (!seen.has(f.id)) {
         seen.add(f.id);
         combined.push(f);
@@ -201,12 +280,30 @@ export const FixturesList: React.FC<FixturesListProps> = ({
     });
 
     return combined;
-  }, [uniqueFixtures, liveScores, baseToday]);
+  }, [livePredictionsFixtures, uniqueFixtures, liveScores, baseToday]);
 
   const displayedFixtures = useMemo(() => {
+    const applySort = (list: Fixture[]) => {
+      if (!sortBy || sortBy === 'DEFAULT') return list;
+      return list.slice().sort((a, b) => {
+        if (sortBy === 'PROB_DESC') return getTipProb(b) - getTipProb(a);
+        if (sortBy === 'PROB_ASC') return getTipProb(a) - getTipProb(b);
+        if (sortBy === 'HOME_DESC') return getHomeProb(b) - getHomeProb(a);
+        if (sortBy === 'DRAW_DESC') return getDrawProb(b) - getDrawProb(a);
+        if (sortBy === 'AWAY_DESC') return getAwayProb(b) - getAwayProb(a);
+        return 0;
+      });
+    };
+
     if (activeScope === 'LIVE') {
-      return liveFixtures.filter((f) => {
-        if (selectedLeague !== 'ALL' && f.league.toUpperCase() !== selectedLeague.toUpperCase()) return false;
+      const filtered = liveFixtures.filter((f) => {
+        if (selectedLeague !== 'ALL') {
+          const lq = selectedLeague.toUpperCase();
+          const matchLeague =
+            (f.league && f.league.toUpperCase() === lq) ||
+            (f.leagueName && f.leagueName.toUpperCase() === lq);
+          if (!matchLeague) return false;
+        }
         if (searchQuery.trim().length > 0) {
           const query = searchQuery.toLowerCase();
           const matchName = `${f.homeTeam} ${f.awayTeam} ${f.leagueName}`.toLowerCase();
@@ -214,12 +311,19 @@ export const FixturesList: React.FC<FixturesListProps> = ({
         }
         return true;
       });
+      return applySort(filtered);
     }
 
     if (activeScope === 'HISTORY') {
-      return historyFixtures
+      const filtered = historyFixtures
         .filter((f) => {
-          if (selectedLeague !== 'ALL' && f.league.toUpperCase() !== selectedLeague.toUpperCase()) return false;
+          if (selectedLeague !== 'ALL') {
+            const lq = selectedLeague.toUpperCase();
+            const matchLeague =
+              (f.league && f.league.toUpperCase() === lq) ||
+              (f.leagueName && f.leagueName.toUpperCase() === lq);
+            if (!matchLeague) return false;
+          }
           if (searchQuery.trim().length > 0) {
             const query = searchQuery.toLowerCase();
             const matchName = `${f.homeTeam} ${f.awayTeam} ${f.leagueName}`.toLowerCase();
@@ -233,10 +337,11 @@ export const FixturesList: React.FC<FixturesListProps> = ({
           if (priorityA !== priorityB) return priorityA - priorityB;
           return b.matchDate.localeCompare(a.matchDate);
         });
+      return applySort(filtered);
     }
 
-    return filteredUpcomingFixtures;
-  }, [activeScope, filteredUpcomingFixtures, liveFixtures, historyFixtures, selectedLeague, searchQuery]);
+    return applySort(filteredUpcomingFixtures);
+  }, [activeScope, filteredUpcomingFixtures, liveFixtures, historyFixtures, selectedLeague, searchQuery, sortBy]);
 
   return (
     <div className="space-y-2.5 font-sans flex-1 flex flex-col">
@@ -313,6 +418,8 @@ export const FixturesList: React.FC<FixturesListProps> = ({
           fixtures={displayedFixtures}
           onSelectDetail={onSelectDetail}
           marketFilter={marketChoiceFilter as any}
+          sortBy={sortBy}
+          onSelectSortBy={onSelectSortBy}
         />
       ) : (
         <div className="space-y-4">

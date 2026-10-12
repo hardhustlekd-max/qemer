@@ -347,6 +347,22 @@ export class EngineService {
   }
 
   /**
+   * Fetches live in-play predictions directly from predictions db
+   */
+  public static async getLivePredictions(league = 'ALL', limit = 100): Promise<Fixture[]> {
+    const params = new URLSearchParams();
+    if (league !== 'ALL') params.set('league', league);
+    params.set('limit', String(limit));
+
+    const serverData = await this.safeJsonFetch(`/api/fixtures/live?${params.toString()}`);
+    if (serverData && serverData.success && Array.isArray(serverData.fixtures) && serverData.fixtures.length > 0) {
+      return serverData.fixtures;
+    }
+
+    return [];
+  }
+
+  /**
    * Fetches live in-play scores
    */
   public static async getLiveScores(): Promise<LiveScore[]> {
@@ -359,7 +375,7 @@ export class EngineService {
   }
 
   /**
-   * Fetches historical completed match results mapped to Fixture format
+   * Fetches historical match predictions directly from predictions db
    */
   public static async getHistoricalMatches(league = 'ALL', limit = 200): Promise<Fixture[]> {
     const params = new URLSearchParams();
@@ -367,17 +383,15 @@ export class EngineService {
     params.set('limit', String(limit));
 
     const serverData = await this.safeJsonFetch(`/api/fixtures/history?${params.toString()}`);
-    let rawMatches: HistoricalMatch[] = [];
-
     if (serverData && serverData.success && Array.isArray(serverData.matches) && serverData.matches.length > 0) {
-      rawMatches = serverData.matches;
-    } else {
-      rawMatches = localHistoricalMatches;
-      if (league !== 'ALL') {
-        rawMatches = rawMatches.filter((m) => m.div.toUpperCase() === league.toUpperCase());
-      }
-      rawMatches = rawMatches.slice(0, limit);
+      return serverData.matches;
     }
+
+    let rawMatches: HistoricalMatch[] = localHistoricalMatches;
+    if (league !== 'ALL') {
+      rawMatches = rawMatches.filter((m) => m.div.toUpperCase() === league.toUpperCase());
+    }
+    rawMatches = rawMatches.slice(0, limit);
 
     const leagueMap = new Map<string, string>();
     GLOBAL_LEAGUES_DATASET.forEach((l) => leagueMap.set(l.code.toUpperCase(), l.name));

@@ -136,4 +136,186 @@ export class PredictionPipelineService {
       fixtures: enrichedFixtures,
     };
   }
+
+  /**
+   * Processes live matches through the Poisson Prediction Engine
+   * and stores predictions in predictions.sqlite under live_predictions
+   */
+  public static async predictAndStoreLiveFixtures(
+    liveFixtures: Fixture[]
+  ): Promise<{ count: number; fixtures: Fixture[] }> {
+    const settings: EngineSettings = db.getSettings() || {
+      activeProvider: 'FLASHSCORE',
+      rollingMatchWindow: 15,
+      minEVThreshold: 1.10,
+      safeWinThreshold: 0.72,
+      homeAdvantageFactor: 1.12,
+      formDecayRate: 0.85,
+      autoSyncDaily: true,
+    };
+
+    const rawHist = db.getAllHistoricalMatches(1500);
+    const scrapedMatches = db.getFlashscoreScrapedMatches(500);
+    const scrapedAsHistorical: any[] = scrapedMatches
+      .filter((sm) => sm.result?.home !== undefined && sm.result?.away !== undefined)
+      .map((sm) => ({
+        div: sm.leagueName || sm.stage || 'FLASHSCORE',
+        matchDate: sm.date ? sm.date.slice(0, 10) : '2024-01-01',
+        homeTeam: sm.home.name,
+        awayTeam: sm.away.name,
+        fthg: parseInt(sm.result!.home!, 10) || 0,
+        ftag: parseInt(sm.result!.away!, 10) || 0,
+        ftr: (parseInt(sm.result!.home!, 10) || 0) > (parseInt(sm.result!.away!, 10) || 0)
+          ? 'H'
+          : (parseInt(sm.result!.home!, 10) || 0) < (parseInt(sm.result!.away!, 10) || 0)
+          ? 'A'
+          : 'D',
+      }));
+    const allMatches = [...rawHist, ...scrapedAsHistorical];
+    const cachedH2HMap = db.getAllPredictionMeasurements();
+
+    const enrichedLive: Fixture[] = liveFixtures.map((f) => {
+      const leagueMatches = allMatches.filter((m) => m.div.toUpperCase() === f.league.toUpperCase());
+      const historicalContext = leagueMatches.length >= 10 ? leagueMatches : allMatches;
+
+      const cleanId = (f.id || '').replace(/^fs_/, '');
+      const cachedH2H =
+        cachedH2HMap.get(cleanId) ||
+        cachedH2HMap.get(f.id) ||
+        (f.prediction?.measurements?.h2h && f.prediction.measurements.h2h.matchesCount > 0
+          ? f.prediction.measurements.h2h
+          : null);
+
+      const { prediction, homeStats, awayStats } = PoissonEngine.predictMatch(
+        f.homeTeam,
+        f.awayTeam,
+        historicalContext,
+        settings,
+        cachedH2H,
+        allMatches
+      );
+
+      const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(
+        prediction,
+        f.odds,
+        settings,
+        f.homeTeam,
+        f.awayTeam
+      );
+
+      return {
+        ...f,
+        status: 'LIVE' as const,
+        prediction,
+        markets,
+        bestValueMarket,
+        homeStats,
+        awayStats,
+        measurements: prediction.measurements,
+      };
+    });
+
+    await predictionsDb.init();
+    predictionsDb.saveLivePredictions(enrichedLive);
+
+    return {
+      count: enrichedLive.length,
+      fixtures: enrichedLive,
+    };
+  }
+
+  /**
+   * Processes historical matches through the Poisson Prediction Engine
+   * and stores predictions in predictions.sqlite under historical_predictions
+   */
+  public static async predictAndStoreHistoricalMatches(
+    historicalMatches: any[]
+  ): Promise<{ count: number; fixtures: Fixture[] }> {
+    const settings: EngineSettings = db.getSettings() || {
+      activeProvider: 'FLASHSCORE',
+      rollingMatchWindow: 15,
+      minEVThreshold: 1.10,
+      safeWinThreshold: 0.72,
+      homeAdvantageFactor: 1.12,
+      formDecayRate: 0.85,
+      autoSyncDaily: true,
+    };
+
+    const rawHist = db.getAllHistoricalMatches(1500);
+    const cachedH2HMap = db.getAllPredictionMeasurements();
+
+    const enrichedHistory: Fixture[] = historicalMatches.map((m) => {
+      const leagueMatches = rawHist.filter((rh) => rh.div.toUpperCase() === (m.div || '').toUpperCase());
+      const historicalContext = leagueMatches.length >= 10 ? leagueMatches : rawHist;
+
+      const cleanId = String(m.id || '').replace(/^fs_hist_/, '').replace(/^hist_/, '').replace(/^fs_/, '');
+      const cachedH2H =
+        cachedH2HMap.get(cleanId) ||
+        cachedH2HMap.get(m.id);
+
+      const homeTeam = m.homeTeam || m.home?.name || 'Home Club';
+      const awayTeam = m.awayTeam || m.away?.name || 'Away Club';
+      const homeWinOdds = m.b365H || (m.ftr === 'H' ? 1.85 : 3.40);
+      const drawOdds = m.b365D || 3.30;
+      const awayWinOdds = m.b365A || (m.ftr === 'A' ? 2.10 : 3.60);
+
+      const { prediction, homeStats, awayStats } = PoissonEngine.predictMatch(
+        homeTeam,
+        awayTeam,
+        historicalContext,
+        settings,
+        cachedH2H,
+        rawHist
+      );
+
+      const odds = {
+        homeWin: homeWinOdds,
+        draw: drawOdds,
+        awayWin: awayWinOdds,
+        over25: m.b365Over25 ?? 1.85,
+        under25: m.b365Under25 ?? 1.95,
+      };
+
+      const { markets, bestValueMarket } = PoissonEngine.calculateMarkets(
+        prediction,
+        odds,
+        settings,
+        homeTeam,
+        awayTeam
+      );
+
+      const fixtureId = m.id?.startsWith('hist_') ? m.id : `hist_${m.id}`;
+
+      return {
+        id: fixtureId,
+        providerId: 'HISTORICAL',
+        league: m.div || 'LEAGUE',
+        leagueName: m.leagueName || m.div || 'Historical Match',
+        matchDate: m.matchDate || '2024-01-01',
+        kickOffTime: 'FT',
+        homeTeam,
+        awayTeam,
+        status: 'FINISHED' as const,
+        score: {
+          home: m.fthg ?? 0,
+          away: m.ftag ?? 0,
+        },
+        odds,
+        prediction,
+        markets,
+        bestValueMarket,
+        homeStats,
+        awayStats,
+        measurements: prediction.measurements,
+      };
+    });
+
+    await predictionsDb.init();
+    predictionsDb.saveHistoricalPredictions(enrichedHistory);
+
+    return {
+      count: enrichedHistory.length,
+      fixtures: enrichedHistory,
+    };
+  }
 }

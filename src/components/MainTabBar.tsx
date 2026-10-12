@@ -11,6 +11,8 @@ interface MainTabBarProps {
   setDateFilter: (d: any) => void;
   marketChoiceFilter: string;
   setMarketChoiceFilter: (m: any) => void;
+  sortBy?: 'DEFAULT' | 'PROB_DESC' | 'PROB_ASC' | 'HOME_DESC' | 'DRAW_DESC' | 'AWAY_DESC';
+  onSelectSortBy?: (s: 'DEFAULT' | 'PROB_DESC' | 'PROB_ASC' | 'HOME_DESC' | 'DRAW_DESC' | 'AWAY_DESC') => void;
   searchQuery: string;
   setSearchQuery: (s: string) => void;
   viewMode: string;
@@ -27,6 +29,8 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
   setDateFilter,
   marketChoiceFilter,
   setMarketChoiceFilter,
+  sortBy = 'DEFAULT',
+  onSelectSortBy,
   searchQuery,
   setSearchQuery,
   viewMode,
@@ -68,6 +72,15 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
     { key: 'OVER_UNDER', label: 'Over Under' },
     { key: '1X2', label: '1X2 Match Winner' },
     { key: 'BTTS', label: 'Both Teams to Score' },
+  ];
+
+  const sortOptions = [
+    { key: 'DEFAULT', label: 'Default (League & Kickoff)' },
+    { key: 'PROB_DESC', label: 'Highest Tip % (High → Low)' },
+    { key: 'PROB_ASC', label: 'Lowest Tip % (Low → High)' },
+    { key: 'HOME_DESC', label: 'Highest Home Win % (1)' },
+    { key: 'DRAW_DESC', label: 'Highest Draw % (X)' },
+    { key: 'AWAY_DESC', label: 'Highest Away Win % (2)' },
   ];
 
   const leagueOptions = [
@@ -116,10 +129,17 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
             <button
               type="button"
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer shadow-xs"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                sortBy && sortBy !== 'DEFAULT'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                  : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800'
+              }`}
             >
               <Filter className="w-3.5 h-3.5 text-emerald-500" />
               <span>Filters</span>
+              {sortBy && sortBy !== 'DEFAULT' && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Percentage sort active" />
+              )}
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
@@ -203,6 +223,36 @@ export const MainTabBar: React.FC<MainTabBarProps> = ({
                       </select>
                     </div>
                   )}
+                </div>
+
+                {/* Sort Predictions Table by Percentage */}
+                <div className="relative min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Sort by Percentage
+                    </label>
+                    {sortBy && sortBy !== 'DEFAULT' && (
+                      <button
+                        type="button"
+                        onClick={() => onSelectSortBy?.('DEFAULT')}
+                        className="text-[10px] font-bold text-rose-500 hover:underline cursor-pointer"
+                      >
+                        Reset Sort
+                      </button>
+                    )}
+                  </div>
+                  <select
+                    id="sort-predictions-by-percentage"
+                    value={sortBy || 'DEFAULT'}
+                    onChange={(e) => onSelectSortBy?.(e.target.value as any)}
+                    className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none shadow-xs cursor-pointer"
+                  >
+                    {sortOptions.map((opt) => (
+                      <option key={opt.key} value={opt.key} className="bg-white dark:bg-slate-900">
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Search */}
